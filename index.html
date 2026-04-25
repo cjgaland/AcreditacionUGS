@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plataforma Mentoría ACSA · Área Gestión Sanitaria Sur de Córdoba</title>
+
+  <!-- ── FAVICONS ── -->
+  <link rel="icon" type="image/x-icon"   href="Assets/Favicons/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="Assets/Favicons/favicon_32.png">
+  <link rel="apple-touch-icon" sizes="180x180"    href="Assets/Favicons/favicon_180.png">
+
+  <!-- ── PWA META ── -->
+  <meta name="application-name" content="Mentoría ACSA">
+  <meta name="description"      content="Plataforma de mentoría y seguimiento de acreditación ACSA. Área de Gestión Sanitaria Sur de Córdoba.">
+  <meta name="theme-color"      content="#1e3a5f">
+  <meta name="mobile-web-app-capable"       content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title"   content="Mentoría ACSA">
+
+<!-- ── FIREBASE CDN (compat v9) ── -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     PANTALLA: LOGIN
+══════════════════════════════════════════════════════ -->
+<div id="screen-login">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="Assets/AcreditacionAGSSC.png" alt="ACSA" onerror="this.style.display='none'">
+    </div>
+    <div class="login-header">
+      <h1>Plataforma de Mentoría ACSA</h1>
+      <p>Área de Gestión Sanitaria Sur de Córdoba</p>
+    </div>
+    <div class="login-body">
+
+      <h2 id="login-titulo" class="login-subtitulo">Iniciar sesión</h2>
+
+      <!-- Nombre (solo en registro) -->
+      <div id="row-nombre" class="form-login" style="display:none">
+        <label>Nombre completo</label>
+        <input type="text" id="login-nombre" placeholder="Tu nombre y apellidos" autocomplete="name">
+      </div>
+
+      <!-- Email -->
+      <div class="form-login">
+        <label>Correo corporativo</label>
+        <input type="email" id="login-email" placeholder="usuario@juntadeandalucia.es" autocomplete="email">
+      </div>
+
+      <!-- Contraseña -->
+      <div class="form-login">
+        <label>Contraseña</label>
+        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter'){login();}">
+      </div>
+
+      <!-- Confirmar contraseña (solo en registro) -->
+      <div id="row-pass2" class="form-login" style="display:none">
+        <label>Confirmar contraseña</label>
+        <input type="password" id="login-pass2" placeholder="••••••••" autocomplete="new-password">
+      </div>
+
+      <!-- Botones de acción -->
+      <button id="btn-login"     class="btn-primary login-btn" onclick="login()">Entrar</button>
+      <button id="btn-registrar" class="btn-primary login-btn" onclick="registrar()" style="display:none">Crear cuenta</button>
+      <button id="btn-recuperar" class="btn-primary login-btn" onclick="recuperarPassword()" style="display:none">Enviar enlace de recuperación</button>
+
+      <!-- Mensajes de error / info -->
+      <div id="error-login"></div>
+
+      <!-- Links de cambio de modo -->
+      <div id="link-registro" class="login-links" style="display:none">
+        ¿Primera vez? <a onclick="setModo('registro')">Crear una cuenta</a>
+      </div>
+      <div id="link-recuperar" class="login-links" style="display:none">
+        ¿Olvidaste tu contraseña? <a onclick="setModo('recuperar')">Recuperarla</a>
+      </div>
+      <div id="link-login" class="login-links" style="display:none">
+        ¿Ya tienes cuenta? <a onclick="setModo('login')">Iniciar sesión</a>
+      </div>
+
+    </div>
+    <div class="login-footer">
+      <a href="Estandares_ACSA/index.html">← Buscador de Estándares ACSA</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PANTALLA: ACCESO PENDIENTE
+══════════════════════════════════════════════════════ -->
+<div id="screen-pending">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="pending-icon">⏳</div>
+      <h1>Acceso pendiente de activación</h1>
+    </div>
+    <div class="login-body">
+      <p>Tu cuenta <strong><span id="pending-email"></span></strong> ha sido registrada correctamente.</p>
+      <p>Un administrador del Área de Calidad activará tu acceso en breve y recibirás un aviso por correo.</p>
+      <p>Si tienes urgencia, contacta con:</p>
+      <div class="pending-contacts">
+        <a class="btn-wa" href="https://wa.me/34630417771" target="_blank">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.062.524 4.004 1.447 5.699L.057 23.004a.75.75 0 0 0 .939.939l5.305-1.39A11.944 11.944 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.694 9.694 0 0 1-4.942-1.354l-.355-.21-3.149.825.839-3.067-.229-.374A9.693 9.693 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/></svg>
+          Rafael Romero
+        </a>
+        <a class="btn-wa" href="https://wa.me/34649003421" target="_blank">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.062.524 4.004 1.447 5.699L.057 23.004a.75.75 0 0 0 .939.939l5.305-1.39A11.944 11.944 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.694 9.694 0 0 1-4.942-1.354l-.355-.21-3.149.825.839-3.067-.229-.374A9.693 9.693 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/></svg>
+          Carlos Galán
+        </a>
+      </div>
+      <button class="btn-secondary" onclick="logout()">Cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PANTALLA PRINCIPAL: APP
+══════════════════════════════════════════════════════ -->
+<div id="screen-app">
+
+  <!-- ── HEADER ── -->
+  <header class="app-header">
+    <div class="header-left">
+      <button class="menu-toggle" id="menuToggle" onclick="App.toggleSidebar()" title="Menú">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="3" y1="6"  x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <div class="header-brand">
+        <span class="brand-title">Mentoría ACSA</span>
+        <span class="brand-sub" id="header-subtitle">Área Gestión Sanitaria Sur de Córdoba</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <!-- Notificaciones -->
+      <button class="header-btn notif-btn" id="notifBtn" onclick="App.verMensajes()" title="Mensajes">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        <span class="notif-badge" id="notif-badge" style="display:none">0</span>
+      </button>
+      <!-- Usuario -->
+      <div class="user-menu" id="userMenu">
+        <div class="user-avatar" id="userAvatar" onclick="App.toggleUserMenu()">
+          <img id="userPhoto" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" style="display:none" onerror="this.style.display='none'">
+          <span id="userInitials">?</span>
+        </div>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="user-info">
+            <strong id="userName">—</strong>
+            <small id="userEmail">—</small>
+            <small id="userRol">—</small>
+          </div>
+          <hr>
+          <a href="Estandares_ACSA/index.html" class="dropdown-item">📋 Buscador de Estándares</a>
+          <button class="dropdown-item" onclick="logout()">🚪 Cerrar sesión</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="app-body">
+
+    <!-- ── SIDEBAR ── -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-section" id="nav-admin" style="display:none">
+        <div class="nav-label">Administración</div>
+        <a class="nav-item active" data-view="dashboard"   onclick="App.navigate('dashboard')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Cuadro de Mandos
+        </a>
+        <a class="nav-item" data-view="ugcs-list" onclick="App.navigate('ugcs-list')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Directorio de UGCs
+        </a>
+        <a class="nav-item" data-view="mensajes-admin" onclick="App.navigate('mensajes-admin')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Mensajes
+          <span class="nav-badge" id="nav-badge-mensajes" style="display:none">0</span>
+        </a>
+        <a class="nav-item" data-view="usuarios" onclick="App.navigate('usuarios')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Usuarios
+        </a>
+      </div>
+
+      <div class="sidebar-section" id="nav-ugc" style="display:none">
+        <div class="nav-label">Mi Unidad</div>
+        <a class="nav-item active" data-view="mi-estado" onclick="App.navigate('mi-estado')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Mi Estado
+        </a>
+        <a class="nav-item" data-view="mis-estandares" onclick="App.navigate('mis-estandares')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          Mis Estándares
+        </a>
+        <a class="nav-item" data-view="reuniones" onclick="App.navigate('reuniones')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Reuniones y Tareas
+        </a>
+        <a class="nav-item" data-view="mis-mensajes" onclick="App.navigate('mis-mensajes')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Mensajes
+          <span class="nav-badge" id="nav-badge-mis-mensajes" style="display:none">0</span>
+        </a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="nav-label">Herramientas</div>
+        <a class="nav-item" href="Estandares_ACSA/index.html">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Buscador de Estándares
+        </a>
+        <a class="nav-item" href="https://mejora-c.juntadeandalucia.es" target="_blank">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          ME_jora C
+        </a>
+      </div>
+    </nav>
+
+    <!-- ── OVERLAY SIDEBAR MÓVIL ── -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="App.closeSidebar()"></div>
+
+    <!-- ── CONTENIDO PRINCIPAL ── -->
+    <main class="main-content" id="mainContent">
+
+      <!-- ════ VISTA: CUADRO DE MANDOS (ADMIN) ════ -->
+      <div class="view" id="view-dashboard">
+        <div class="view-header">
+          <h2>Cuadro de Mandos</h2>
+          <span class="view-sub">Seguimiento global de acreditación · Área Sur de Córdoba</span>
+        </div>
+
+        <!-- KPIs globales -->
+        <div class="kpi-grid" id="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:#d6e8f5;color:#1e5b8c">📋</div>
+            <div class="kpi-val" id="kpi-total">60</div>
+            <div class="kpi-label">UGCs en el área</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:#d5ede0;color:#2d7a4f">✅</div>
+            <div class="kpi-val" id="kpi-activas">—</div>
+            <div class="kpi-label">En proceso activo</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:#fdefd3;color:#b06000">📅</div>
+            <div class="kpi-val" id="kpi-reuniones">—</div>
+            <div class="kpi-label">Reuniones este mes</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:#fde0e0;color:#b03030">💬</div>
+            <div class="kpi-val" id="kpi-mensajes-pend">—</div>
+            <div class="kpi-label">Mensajes sin leer</div>
+          </div>
+        </div>
+
+        <!-- Tabla resumen de UGCs en proceso -->
+        <div class="card">
+          <div class="card-head">
+            <h3>UGCs en proceso de acreditación</h3>
+            <button class="btn-sm" onclick="App.navigate('ugcs-list')">Ver todas →</button>
+          </div>
+          <div id="tabla-ugcs-activas">
+            <div class="loading">Cargando datos…</div>
+          </div>
+        </div>
+
+        <!-- Propuestas pendientes de validación -->
+        <div class="card">
+          <div class="card-head">
+            <h3>⏳ Estándares propuestos pendientes de validación</h3>
+          </div>
+          <div id="lista-propuestos">
+            <div class="loading">Cargando…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ VISTA: DIRECTORIO UGCs (ADMIN) ════ -->
+      <div class="view" id="view-ugcs-list" style="display:none">
+        <div class="view-header">
+          <h2>Directorio de UGCs</h2>
+          <span class="view-sub">60 unidades · Área de Gestión Sanitaria Sur de Córdoba</span>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filter-bar">
+          <div class="search-wrap-m">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="ugc-search" placeholder="Buscar unidad…" oninput="App.filtrarUGCs()">
+          </div>
+          <select id="ugc-filtro-fase" onchange="App.filtrarUGCs()">
+            <option value="">Todas las fases</option>
+            <option value="Sin solicitar">Sin solicitar</option>
+            <option value="Solicitud de Certificación">Solicitud de Certificación</option>
+            <option value="Autoevaluación">Autoevaluación</option>
+            <option value="Evaluación">Evaluación</option>
+            <option value="Seguimiento">Seguimiento</option>
+            <option value="Recertificación">Recertificación</option>
+          </select>
+          <select id="ugc-filtro-ambito" onchange="App.filtrarUGCs()">
+            <option value="">Todos los ámbitos</option>
+            <option value="UGC_AP">Atención Primaria</option>
+            <option value="UGC_AH">Atención Hospitalaria</option>
+            <option value="Urgencias">Urgencias</option>
+            <option value="LAB">Laboratorio</option>
+            <option value="IMAG">Diagnóstico por Imagen</option>
+            <option value="HOSP">Hospital</option>
+          </select>
+        </div>
+
+        <div id="ugcs-grid" class="ugcs-grid">
+          <div class="loading">Cargando unidades…</div>
+        </div>
+      </div>
+
+      <!-- ════ VISTA: FICHA UGC (ADMIN) ════ -->
+      <div class="view" id="view-ficha-ugc" style="display:none">
+        <div class="view-header">
+          <button class="btn-back" onclick="App.navigate('ugcs-list')">← Volver</button>
+          <div>
+            <h2 id="ficha-titulo">UGC</h2>
+            <span class="view-sub" id="ficha-subtitulo"></span>
+          </div>
+          <div class="header-actions">
+            <button class="btn-primary" onclick="App.generarInforme()">📄 Generar informe</button>
+            <button class="btn-secondary" onclick="App.nuevaReunion()">📅 Nueva reunión</button>
+          </div>
+        </div>
+
+        <!-- Progreso -->
+        <div class="progreso-card" id="ficha-progreso"></div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab active" data-tab="estandares" onclick="App.switchTab(this,'estandares')">Estándares (76)</button>
+          <button class="tab" data-tab="reuniones"   onclick="App.switchTab(this,'reuniones')">Reuniones</button>
+          <button class="tab" data-tab="mensajes-ugc" onclick="App.switchTab(this,'mensajes-ugc')">Mensajes</button>
+          <button class="tab" data-tab="info-ugc"    onclick="App.switchTab(this,'info-ugc')">Información</button>
+        </div>
+
+        <div id="tab-estandares"  class="tab-content active"></div>
+        <div id="tab-reuniones"   class="tab-content" style="display:none"></div>
+        <div id="tab-mensajes-ugc" class="tab-content" style="display:none"></div>
+        <div id="tab-info-ugc"    class="tab-content" style="display:none"></div>
+      </div>
+
+      <!-- ════ VISTA: MENSAJES ADMIN ════ -->
+      <div class="view" id="view-mensajes-admin" style="display:none">
+        <div class="view-header">
+          <h2>Mensajes</h2>
+          <span class="view-sub">Comunicaciones de todas las UGCs</span>
+        </div>
+        <div id="mensajes-admin-list" class="mensajes-list">
+          <div class="loading">Cargando mensajes…</div>
+        </div>
+      </div>
+
+      <!-- ════ VISTA: USUARIOS (ADMIN) ════ -->
+      <div class="view" id="view-usuarios" style="display:none">
+        <div class="view-header">
+          <h2>Gestión de Usuarios</h2>
+          <span class="view-sub">Activación y asignación de roles</span>
+        </div>
+        <div id="usuarios-list">
+          <div class="loading">Cargando usuarios…</div>
+        </div>
+      </div>
+
+      <!-- ════ VISTA: MI ESTADO (UGC) ════ -->
+      <div class="view" id="view-mi-estado" style="display:none">
+        <div class="view-header">
+          <h2>Mi Estado de Acreditación</h2>
+          <span class="view-sub" id="mi-ugc-nombre">—</span>
+        </div>
+        <div id="mi-progreso-card" class="progreso-card"></div>
+        <div class="card" style="margin-top:20px">
+          <div class="card-head"><h3>📅 Próximas tareas</h3></div>
+          <div id="mis-tareas-list"><div class="loading">Cargando…</div></div>
+        </div>
+        <div class="card" style="margin-top:20px">
+          <div class="card-head"><h3>📋 Últimas reuniones</h3></div>
+          <div id="mis-reuniones-resumen"><div class="loading">Cargando…</div></div>
+        </div>
+      </div>
+
+      <!-- ════ VISTA: MIS ESTÁNDARES (UGC) ════ -->
+      <div class="view" id="view-mis-estandares" style="display:none">
+        <div class="view-header">
+          <h2>Mis Estándares</h2>
+          <span class="view-sub">76 estándares · Manual ACSA UGC</span>
+        </div>
+        <div class="filter-bar">
+          <div class="search-wrap-m">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="est-search" placeholder="Buscar estándar…" oninput="App.filtrarMisEstandares()">
+          </div>
+          <select id="est-filtro-estado" onchange="App.filtrarMisEstandares()">
+            <option value="">Todos los estados</option>
+            <option value="cumple">✅ Cumple</option>
+            <option value="propuesto">⏳ Propuesto</option>
+            <option value="pendiente">⭕ Pendiente</option>
+          </select>
+          <select id="est-filtro-grupo" onchange="App.filtrarMisEstandares()">
+            <option value="">Todos los grupos</option>
+            <option value="I">Grupo I</option>
+            <option value="II">Grupo II</option>
+            <option value="III">Grupo III</option>
+          </select>
+        </div>
+        <div id="mis-estandares-list"><div class="loading">Cargando estándares…</div></div>
+      </div>
+
+      <!-- ════ VISTA: REUNIONES (UGC) ════ -->
+      <div class="view" id="view-reuniones" style="display:none">
+        <div class="view-header">
+          <h2>Reuniones y Tareas</h2>
+          <span class="view-sub">Seguimiento del proceso de mentoría</span>
+        </div>
+        <div id="reuniones-list"><div class="loading">Cargando…</div></div>
+      </div>
+
+      <!-- ════ VISTA: MIS MENSAJES (UGC) ════ -->
+      <div class="view" id="view-mis-mensajes" style="display:none">
+        <div class="view-header">
+          <h2>Mensajes</h2>
+          <span class="view-sub">Comunicación con el equipo de mentoría</span>
+        </div>
+        <div id="mis-mensajes-list" class="mensajes-list"></div>
+        <div class="mensaje-compose">
+          <h4>Nuevo mensaje</h4>
+          <select id="msg-tipo">
+            <option value="consulta">💬 Consulta</option>
+            <option value="incidencia">⚠️ Incidencia</option>
+            <option value="sugerencia">💡 Sugerencia</option>
+            <option value="ayuda">🆘 Solicitud de ayuda</option>
+          </select>
+          <input type="text" id="msg-estandar" placeholder="Estándar relacionado (opcional, ej: ES 5 01.02_03)">
+          <textarea id="msg-texto" rows="4" placeholder="Escribe tu mensaje aquí…"></textarea>
+          <div class="compose-actions">
+            <button class="btn-primary" onclick="App.enviarMensaje()">Enviar mensaje</button>
+            <div class="wa-contacts">
+              <span>O contacta directamente:</span>
+              <a class="btn-wa-sm" href="https://wa.me/34630417771" target="_blank">WhatsApp Rafael</a>
+              <a class="btn-wa-sm" href="https://wa.me/34649003421" target="_blank">WhatsApp Carlos</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     MODALES
+══════════════════════════════════════════════════════ -->
+
+<!-- Modal: detalle estándar -->
+<div class="modal-overlay" id="modal-estandar" onclick="App.cerrarModal('modal-estandar')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="App.cerrarModal('modal-estandar')">✕</button>
+    <div id="modal-estandar-content"></div>
+  </div>
+</div>
+
+<!-- Modal: nueva reunión -->
+<div class="modal-overlay" id="modal-reunion" onclick="App.cerrarModal('modal-reunion')">
+  <div class="modal modal-md" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="App.cerrarModal('modal-reunion')">✕</button>
+    <h3>Nueva Reunión</h3>
+    <div class="form-group">
+      <label>Fecha</label>
+      <input type="date" id="reunion-fecha">
+    </div>
+    <div class="form-group">
+      <label>Tipo</label>
+      <select id="reunion-tipo">
+        <option value="inicial">Reunión inicial</option>
+        <option value="seguimiento">Seguimiento</option>
+        <option value="evaluacion">Evaluación final</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Participantes</label>
+      <input type="text" id="reunion-participantes" placeholder="Nombres separados por coma">
+    </div>
+    <div class="form-group">
+      <label>Acuerdos y observaciones</label>
+      <textarea id="reunion-acuerdos" rows="3" placeholder="Resumen de acuerdos…"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Tareas asignadas</label>
+      <div id="tareas-container">
+        <div class="tarea-row">
+          <input type="text" placeholder="Descripción tarea" class="tarea-desc">
+          <input type="text" placeholder="Responsable" class="tarea-resp">
+          <input type="date" class="tarea-plazo">
+          <button onclick="App.addTareaRow(this)">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="App.cerrarModal('modal-reunion')">Cancelar</button>
+      <button class="btn-primary" onclick="App.guardarReunion()">Guardar reunión</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ── SCRIPTS ── -->
+<script src="firebase.js"></script>
+<script src="ugcs.js"></script>
+<script src="Estandares_ACSA/estandares.js"></script>
+<script src="auth.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>

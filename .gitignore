@@ -1,0 +1,27 @@
+# Firebase caché local
+.firebase/
+
+# Backups locales
+backup/
+
+# Configuración Claude Code
+.claude/
+
+# Documentos Office temporales y originales
+~$*
+*.docx
+*.xlsx
+*.xlsm
+
+# Notas internas
+estructura.txt
+claude.md
+CLAUDE.md
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Node (por si se añade en el futuro)
+node_modules/
