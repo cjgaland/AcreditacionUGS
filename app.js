@@ -5,7 +5,7 @@
 
 /* jshint esversion: 9 */
 /* global firebase, auth, db, COL, UGCS, STANDARDS,
-          calcularNivel, fmtFecha, fmtFechaHora,
+          calcularNivel, fmtFecha, fmtFechaHora, calcularFechasACSA, fmtFechaStr,
           getUser, getPerfil, isAdmin, isUGC,
           logout, abrirWhatsApp,
           iniciarListenerNotificaciones,
@@ -276,6 +276,38 @@ const App = {
     } catch(e) {
       document.getElementById('kpi-mensajes-pend').textContent = '—';
     }
+
+    // Panel de alertas de certificación
+    const alertasEl = document.getElementById('panel-alertas-cert');
+    if (alertasEl) {
+      const ugcsAlerta = UGCS.filter(u => {
+        if (!u.fase || u.fase === 'Sin solicitar') return false;
+        if (u.fase === 'Pendiente de estabilización') return true;
+        if (u.fase === 'Autoevaluación' && u.fecha_inicio_fase) {
+          const dias = Math.round((new Date() - new Date(u.fecha_inicio_fase + 'T00:00:00')) / 86400000);
+          if (dias > 300) return true;
+        }
+        const fechaCertStr = u.fecha_certificacion || u.fecha_fin;
+        if (fechaCertStr && ['Seguimiento', 'Recertificación'].includes(u.fase)) {
+          const f = calcularFechasACSA(fechaCertStr);
+          if (f && (f.diasHastaVenc < 365 || (f.diasHastaSeg < 90 && f.diasHastaVenc > 0))) return true;
+        }
+        return false;
+      });
+      document.getElementById('kpi-alertas').textContent = ugcsAlerta.length;
+      if (!ugcsAlerta.length) {
+        alertasEl.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">✅ Sin alertas de certificación activas.</div>';
+      } else {
+        alertasEl.innerHTML = ugcsAlerta.map(u => `
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">${escHtml(u.denominacion)} ${App._faseBadge(u.fase)}</div>
+              ${App._alertasCertHtml(u)}
+            </div>
+            <button class="btn-sm" style="flex-shrink:0;margin-top:2px" onclick="App.abrirFichaUGC('${u.id}')">Ver →</button>
+          </div>`).join('');
+      }
+    }
   },
 
   async _cargarNivelDashboard(ugcId) {
@@ -342,15 +374,75 @@ const App = {
 
   _faseBadge(fase) {
     const clases = {
-      'Sin solicitar':           'fase-sin',
-      'Solicitud de Certificación': 'fase-activa',
-      'Autoevaluación':          'fase-activa',
-      'Evaluación':              'fase-eval',
-      'Seguimiento':             'fase-activa',
-      'Recertificación':         'fase-recert',
+      'Sin solicitar':                'fase-sin',
+      'Solicitud de Certificación':   'fase-activa',
+      'Autoevaluación':               'fase-activa',
+      'Evaluación':                   'fase-eval',
+      'Pendiente de estabilización':  'fase-estab',
+      'Seguimiento':                  'fase-activa',
+      'Recertificación':              'fase-recert',
     };
     const cls = clases[fase] || 'fase-sin';
     return `<span class="fase-badge ${cls}">${fase || 'Sin solicitar'}</span>`;
+  },
+
+  _alertasCertHtml(ugc) {
+    const alertas = [];
+
+    // Pendiente de estabilización (máx. 6 meses)
+    if (ugc.fase === 'Pendiente de estabilización' && ugc.fecha_inicio_fase) {
+      const inicio = new Date(ugc.fecha_inicio_fase + 'T00:00:00');
+      const diasPasados   = Math.round((new Date() - inicio) / 86400000);
+      const diasRestantes = 180 - diasPasados;
+      if (diasRestantes < 0) {
+        alertas.push({ c: '#b03030', i: '🔴', t: `Plazo de estabilización vencido hace ${Math.abs(diasRestantes)} días. Contactar con ACSA urgentemente.` });
+      } else {
+        alertas.push({ c: '#b06000', i: '⏳', t: `Pendiente de estabilización: ${diasRestantes} días restantes para subsanar obligatorios (máx. 6 meses).` });
+      }
+    }
+
+    // Autoevaluación muy larga (máx. 12 meses)
+    if (ugc.fase === 'Autoevaluación' && ugc.fecha_inicio_fase) {
+      const inicio = new Date(ugc.fecha_inicio_fase + 'T00:00:00');
+      const dias   = Math.round((new Date() - inicio) / 86400000);
+      if (dias > 300) {
+        const meses = Math.round(dias / 30);
+        alertas.push({ c: '#b06000', i: '⚠️', t: `Autoevaluación en curso hace ${meses} meses (máximo: 12). Planificar visita de evaluación.` });
+      }
+    }
+
+    // Alertas por fecha de certificación
+    const fechaCertStr = ugc.fecha_certificacion || ugc.fecha_fin;
+    if (fechaCertStr && ['Seguimiento', 'Recertificación'].includes(ugc.fase)) {
+      const f = calcularFechasACSA(fechaCertStr);
+      if (f) {
+        const { diasHastaVenc, diasHastaSeg, seg, venc } = f;
+        const strVenc = fmtFechaStr(venc.toISOString().split('T')[0]);
+        const strSeg  = fmtFechaStr(seg.toISOString().split('T')[0]);
+        if (diasHastaVenc < 0) {
+          alertas.push({ c: '#b03030', i: '🔴', t: `Certificado VENCIDO hace ${Math.abs(diasHastaVenc)} días (venció: ${strVenc}).` });
+        } else if (diasHastaVenc < 90) {
+          alertas.push({ c: '#b03030', i: '🔴', t: `Vence en ${diasHastaVenc} días (${strVenc}). Renovación urgente.` });
+        } else if (diasHastaVenc < 365) {
+          const meses = Math.round(diasHastaVenc / 30);
+          alertas.push({ c: '#b06000', i: '⚠️', t: `Vence el ${strVenc} (en ${meses} meses). Iniciar proceso de renovación con ACSA.` });
+        }
+        if (diasHastaSeg < 0 && diasHastaVenc > 0) {
+          alertas.push({ c: '#1e5b8c', i: '📋', t: `Visita de seguimiento (2,5 años) pendiente desde ${strSeg}. Coordinar con ACSA.` });
+        } else if (diasHastaSeg >= 0 && diasHastaSeg < 90) {
+          alertas.push({ c: '#1e5b8c', i: '📋', t: `Visita de seguimiento próxima: ${strSeg} (en ${diasHastaSeg} días).` });
+        }
+      }
+    }
+
+    if (!alertas.length) return '';
+    return `<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+      ${alertas.map(a =>
+        `<div style="display:flex;gap:8px;align-items:flex-start;padding:10px 12px;background:${a.c}18;border-left:3px solid ${a.c};border-radius:0 6px 6px 0;font-size:13px;color:${a.c}">
+          <span style="flex-shrink:0">${a.i}</span><span>${a.t}</span>
+        </div>`
+      ).join('')}
+    </div>`;
   },
 
   /* ══════════════════════════════════════════════════
@@ -809,6 +901,7 @@ const App = {
 
     App._infoUGCData = { ugc, ugcFs, responsables };
     App._mostrarInfoUGC(false);
+    App.cargarHistorialFases(ugcId);
   },
 
   _mostrarInfoUGC(editMode) {
@@ -818,7 +911,7 @@ const App = {
     const ugcId = ugc.id;
     const v = campo => (ugcFs[campo] !== undefined && ugcFs[campo] !== null) ? ugcFs[campo] : (ugc[campo] || '');
 
-    const faseOpts = ['Sin solicitar','Solicitud de Certificación','Autoevaluación','Evaluación','Seguimiento','Recertificación']
+    const faseOpts = ['Sin solicitar','Solicitud de Certificación','Autoevaluación','Evaluación','Pendiente de estabilización','Seguimiento','Recertificación']
       .map(f => `<option value="${f}" ${ugc.fase===f?'selected':''}>${f}</option>`).join('');
 
     const respHtml = responsables.length ?
@@ -854,6 +947,26 @@ const App = {
             ${App._inputField('Correo',       'ei-correo',    v('correo'))}
             ${App._inputField('Web',          'ei-web',       v('web'))}
           </div>
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Ciclo de certificación ACSA</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+              <div>
+                <label style="font-size:11px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:4px">Fecha de certificación</label>
+                <input type="date" id="ei-fecha-cert" value="${escHtml(v('fecha_certificacion') || ugc.fecha_fin || '')}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:4px">Nivel certificado</label>
+                <select id="ei-nivel-cert" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box">
+                  <option value="">— Sin certificar —</option>
+                  ${['Avanzado','Óptimo','Excelente'].map(n => `<option value="${n}" ${v('nivel_certificado')===n?'selected':''}>${n}</option>`).join('')}
+                </select>
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:4px">Evaluación prevista</label>
+                <input type="date" id="ei-fecha-prev" value="${escHtml(v('fecha_prevista') || '')}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box">
+              </div>
+            </div>
+          </div>
           <div style="margin-top:12px">
             <label style="font-size:11px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:4px">Observaciones</label>
             <textarea id="ei-observaciones" rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical">${escHtml(v('observaciones'))}</textarea>
@@ -869,6 +982,7 @@ const App = {
           <h4 style="font-size:13px;font-weight:600;margin:0">Información de la unidad</h4>
           <button class="btn-sm" onclick="App._mostrarInfoUGC(true)">✏️ Editar</button>
         </div>
+        ${App._alertasCertHtml({ ...ugc, ...ugcFs })}
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;padding:8px 0">
           ${App._infoRow('ID',          ugc.id)}
           ${App._infoRow('Código ACSA', v('codigo_acsa') || ugc.codigo_acsa || '—')}
@@ -877,12 +991,33 @@ const App = {
           ${App._infoRow('Ubicación',   v('ubicacion')    || ugc.ubicacion)}
           ${App._infoRow('Fase',        ugc.fase)}
           ${App._infoRow('Estado',      ugc.estado_fase || '—')}
+          ${ugc.fecha_inicio_fase ? App._infoRow('Inicio fase actual', fmtFechaStr(ugc.fecha_inicio_fase) + ` (${Math.round((new Date() - new Date(ugc.fecha_inicio_fase + 'T00:00:00')) / 86400000)} días)`) : ''}
+          ${v('fecha_prevista') ? App._infoRow('Evaluación prevista', fmtFechaStr(v('fecha_prevista'))) : ''}
           ${App._infoRow('Dirección',   v('direccion') || ugc.direccion || '—')}
           ${App._infoRow('Teléfono',    v('telefono1')  || ugc.telefono1 || '—')}
           ${App._infoRow('Correo',      v('correo')     || ugc.correo   || '—')}
           ${(v('web') || ugc.web) ? `<div><label style="font-size:11px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:3px">Web</label><a href="${escHtml(v('web')||ugc.web)}" target="_blank" style="color:var(--accent2);font-size:13px">${escHtml(v('web')||ugc.web)}</a></div>` : ''}
           ${(v('observaciones')||ugc.observaciones) ? App._infoRow('Observaciones', v('observaciones')||ugc.observaciones) : ''}
         </div>
+        ${(() => {
+          const fechaCertStr = v('fecha_certificacion') || ugc.fecha_fin;
+          if (!fechaCertStr) return '';
+          const f = calcularFechasACSA(fechaCertStr);
+          if (!f) return '';
+          const strSeg  = fmtFechaStr(f.seg.toISOString().split('T')[0]);
+          const strVenc = fmtFechaStr(f.venc.toISOString().split('T')[0]);
+          const strRen  = fmtFechaStr(f.renovar.toISOString().split('T')[0]);
+          return `<div style="margin-top:16px;padding:14px;background:var(--surface2);border-radius:8px">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Ciclo de 5 años ACSA</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
+              ${App._infoRow('Certificación', fmtFechaStr(fechaCertStr))}
+              ${v('nivel_certificado') ? App._infoRow('Nivel certificado', v('nivel_certificado')) : ''}
+              ${App._infoRow('Seguimiento (2,5 años)', strSeg)}
+              ${App._infoRow('Inicio renovación (~4 años)', strRen)}
+              ${App._infoRow('Vencimiento (5 años)', strVenc)}
+            </div>
+          </div>`;
+        })()}
         <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
           <h4 style="font-size:13px;font-weight:600;margin-bottom:12px">Cambiar fase del proceso</h4>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -893,6 +1028,10 @@ const App = {
         <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
           <h4 style="font-size:13px;font-weight:600;margin-bottom:10px">👤 Responsables de la unidad</h4>
           ${respHtml}
+        </div>
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+          <h4 style="font-size:13px;font-weight:600;margin-bottom:10px">📋 Historial de fases</h4>
+          <div id="historial-fases-list"><div class="loading">Cargando…</div></div>
         </div>`;
     }
   },
@@ -907,14 +1046,17 @@ const App = {
   async guardarInfoUGC(ugcId) {
     const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
     const data = {
-      denominacion:  g('ei-nombre'),
-      codigo_acsa:   g('ei-codigo'),
-      ubicacion:     g('ei-ubicacion'),
-      direccion:     g('ei-direccion'),
-      telefono1:     g('ei-telefono'),
-      correo:        g('ei-correo'),
-      web:           g('ei-web'),
-      observaciones: g('ei-observaciones'),
+      denominacion:        g('ei-nombre'),
+      codigo_acsa:         g('ei-codigo'),
+      ubicacion:           g('ei-ubicacion'),
+      direccion:           g('ei-direccion'),
+      telefono1:           g('ei-telefono'),
+      correo:              g('ei-correo'),
+      web:                 g('ei-web'),
+      observaciones:       g('ei-observaciones'),
+      fecha_certificacion: g('ei-fecha-cert') || null,
+      nivel_certificado:   g('ei-nivel-cert') || null,
+      fecha_prevista:      g('ei-fecha-prev') || null,
     };
     try {
       await db.collection(COL.ugcs).doc(ugcId).set(data, { merge: true });
@@ -934,12 +1076,25 @@ const App = {
 
   async guardarFaseUGC(ugcId) {
     const fase = document.getElementById('nueva-fase-sel').value;
+    const ugc  = UGCS.find(u => u.id === ugcId);
+    const faseAnterior = ugc ? ugc.fase : '';
+    const hoy = new Date().toISOString().split('T')[0];
     try {
-      await db.collection(COL.ugcs).doc(ugcId).set({ fase }, { merge: true });
-      const ugc = UGCS.find(u => u.id === ugcId);
-      if (ugc) ugc.fase = fase;
-      if (App._infoUGCData) App._infoUGCData.ugc.fase = fase;
+      await db.collection(COL.ugcs).doc(ugcId).set({ fase, fecha_inicio_fase: hoy }, { merge: true });
+      await db.collection(COL.ugcs).doc(ugcId).collection('historial_fases').add({
+        fase_anterior: faseAnterior,
+        fase_nueva:    fase,
+        fecha:         firebase.firestore.FieldValue.serverTimestamp(),
+        cambiado_por:  getUser().email,
+      });
+      if (ugc) { ugc.fase = fase; ugc.fecha_inicio_fase = hoy; }
+      if (App._infoUGCData) {
+        App._infoUGCData.ugc.fase = fase;
+        App._infoUGCData.ugc.fecha_inicio_fase = hoy;
+      }
       App.showToast('✅ Fase actualizada correctamente');
+      App._mostrarInfoUGC(false);
+      App.cargarHistorialFases(ugcId);
     } catch(e) {
       App.showToast('❌ Error al guardar la fase');
     }
@@ -994,6 +1149,8 @@ const App = {
             <textarea id="modal-est-evidencia" rows="3" placeholder="Describe brevemente la evidencia disponible en MejoraC…">${escHtml(d.evidencia_texto || '')}</textarea>
             <label>Nombre del documento en MejoraC</label>
             <input type="text" id="modal-est-documento" placeholder="Ej: PLAN_CALIDAD_2025.pdf" value="${escHtml(d.documento_mejora_c || '')}">
+            <label>Área de mejora identificada</label>
+            <textarea id="modal-est-mejora" rows="2" placeholder="Describe qué se puede mejorar en relación a este estándar…">${escHtml(d.area_mejora || '')}</textarea>
           </div>
 
           ${d.validado_en ? `<div style="font-size:11px;color:var(--green);margin-bottom:14px">✅ Validado el ${fmtFecha(d.validado_en)}</div>` : ''}
@@ -1008,15 +1165,18 @@ const App = {
   },
 
   async guardarEstado(ugcId, codigo) {
-    const estado     = document.getElementById('modal-est-estado').value;
-    const evidencia  = document.getElementById('modal-est-evidencia').value.trim();
-    const documento  = document.getElementById('modal-est-documento').value.trim();
-    const perfil     = getPerfil();
+    const estado    = document.getElementById('modal-est-estado').value;
+    const evidencia = document.getElementById('modal-est-evidencia').value.trim();
+    const documento = document.getElementById('modal-est-documento').value.trim();
+    const mejoraEl  = document.getElementById('modal-est-mejora');
+    const mejora    = mejoraEl ? mejoraEl.value.trim() : '';
+    const perfil    = getPerfil();
 
     const data = {
       estado,
       evidencia_texto:    evidencia,
       documento_mejora_c: documento,
+      area_mejora:        mejora,
       actualizado_por:    getUser().uid,
       actualizado_en:     firebase.firestore.FieldValue.serverTimestamp(),
     };
@@ -1207,6 +1367,38 @@ const App = {
     if (ugc) document.getElementById('mi-ugc-nombre').textContent = ugc.denominacion + ' · ' + ugc.fase;
 
     await App._cargarProgresoUGC(ugcId, 'mi-progreso-card');
+
+    // Fechas clave del ciclo de certificación
+    const fechasEl = document.getElementById('mi-fechas-body');
+    if (fechasEl && ugc) {
+      const alertasHtml = App._alertasCertHtml(ugc);
+      const fechaCertStr = ugc.fecha_certificacion || ugc.fecha_fin;
+      let cicloHtml = '';
+      if (fechaCertStr) {
+        const f = calcularFechasACSA(fechaCertStr);
+        if (f) {
+          const strSeg  = fmtFechaStr(f.seg.toISOString().split('T')[0]);
+          const strVenc = fmtFechaStr(f.venc.toISOString().split('T')[0]);
+          const strRen  = fmtFechaStr(f.renovar.toISOString().split('T')[0]);
+          cicloHtml = `
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:${alertasHtml ? '12px' : '0'}">
+              <div><label style="font-size:11px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:3px">Certificación</label><span style="font-size:13px;font-weight:500">${fmtFechaStr(fechaCertStr)}</span></div>
+              ${ugc.nivel_certificado ? `<div><label style="font-size:11px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:3px">Nivel</label><span style="font-size:13px;font-weight:600">${escHtml(ugc.nivel_certificado)}</span></div>` : ''}
+              <div><label style="font-size:11px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:3px">Seguimiento</label><span style="font-size:13px;font-weight:500">${strSeg}</span></div>
+              <div><label style="font-size:11px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:3px">Inicio renovación</label><span style="font-size:13px;font-weight:500">${strRen}</span></div>
+              <div><label style="font-size:11px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:3px">Vencimiento</label><span style="font-size:13px;font-weight:500">${strVenc}</span></div>
+            </div>`;
+        }
+      } else if (ugc.fase === 'Autoevaluación' && ugc.fecha_inicio_fase) {
+        const dias = Math.round((new Date() - new Date(ugc.fecha_inicio_fase + 'T00:00:00')) / 86400000);
+        const meses = Math.round(dias / 30);
+        cicloHtml = `<div style="font-size:13px;color:var(--text2)">📅 En Autoevaluación desde ${fmtFechaStr(ugc.fecha_inicio_fase)} (${meses} meses · máx. 12)</div>`;
+      }
+      if (ugc.fecha_prevista) {
+        cicloHtml += `<div style="font-size:13px;color:var(--text2);margin-top:8px">📋 Evaluación prevista: <strong>${fmtFechaStr(ugc.fecha_prevista)}</strong></div>`;
+      }
+      fechasEl.innerHTML = alertasHtml + cicloHtml || '<div style="font-size:13px;color:var(--text3)">Sin fechas clave registradas. El administrador puede añadirlas en la ficha de tu unidad.</div>';
+    }
 
     // Tareas pendientes
     try {
@@ -1675,6 +1867,107 @@ const App = {
       </tbody>
     </table>
     <div class="footer">Área de Gestión Sanitaria Sur de Córdoba · Área de Calidad y Seguridad del Paciente · Generado el ${fecha}</div>
+    </body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 500);
+  },
+
+  /* ══════════════════════════════════════════════════
+     HISTORIAL DE FASES
+  ══════════════════════════════════════════════════ */
+  async cargarHistorialFases(ugcId) {
+    const el = document.getElementById('historial-fases-list');
+    if (!el) return;
+    try {
+      const snap = await db.collection(COL.ugcs).doc(ugcId)
+        .collection('historial_fases').orderBy('fecha', 'desc').limit(20).get();
+      if (snap.empty) {
+        el.innerHTML = '<div style="font-size:13px;color:var(--text3)">Sin historial registrado (se guardará automáticamente a partir de ahora).</div>';
+        return;
+      }
+      el.innerHTML = snap.docs.map(doc => {
+        const d = doc.data();
+        return `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+          <span style="color:var(--text3);min-width:120px">${fmtFechaHora(d.fecha)}</span>
+          <span>${escHtml(d.fase_anterior || '—')}</span>
+          <span style="color:var(--text3)">→</span>
+          <strong>${escHtml(d.fase_nueva)}</strong>
+          ${d.cambiado_por ? `<span style="color:var(--text3);margin-left:auto;font-size:11px">${escHtml(d.cambiado_por)}</span>` : ''}
+        </div>`;
+      }).join('');
+    } catch(e) {
+      el.innerHTML = '<div style="font-size:13px;color:var(--text3)">Error al cargar historial.</div>';
+    }
+  },
+
+  /* ══════════════════════════════════════════════════
+     INFORME GLOBAL (ADMIN)
+  ══════════════════════════════════════════════════ */
+  generarInformeGlobal() {
+    const fecha = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
+    const ugcsActivas = UGCS.filter(u => u.fase && u.fase !== 'Sin solicitar');
+    const todasUGCs   = UGCS;
+
+    const filaUGC = u => {
+      const fechaCertStr = u.fecha_certificacion || u.fecha_fin;
+      const f = fechaCertStr ? calcularFechasACSA(fechaCertStr) : null;
+      const strVenc = f ? fmtFechaStr(f.venc.toISOString().split('T')[0]) : '—';
+      const strSeg  = f ? fmtFechaStr(f.seg.toISOString().split('T')[0])  : '—';
+      let alerta = '';
+      if (f) {
+        if (f.diasHastaVenc < 0)         alerta = '🔴 VENCIDO';
+        else if (f.diasHastaVenc < 90)   alerta = '🔴 Vence en ' + f.diasHastaVenc + 'd';
+        else if (f.diasHastaVenc < 365)  alerta = '⚠️ Renovar en ' + Math.round(f.diasHastaVenc/30) + 'm';
+        else if (f.diasHastaSeg < 0)     alerta = '📋 Seguim. pendiente';
+        else if (f.diasHastaSeg < 90)    alerta = '📋 Seguim. en ' + f.diasHastaSeg + 'd';
+      }
+      if (u.fase === 'Pendiente de estabilización') alerta = '⏳ Estabilización';
+      return `<tr>
+        <td><strong>${escHtml(u.denominacion)}</strong><br><small style="color:#5a6a7a">${escHtml(u.ubicacion)}</small></td>
+        <td>${escHtml(u.fase || 'Sin solicitar')}</td>
+        <td>${escHtml(u.nivel_certificado || '—')}</td>
+        <td>${fechaCertStr ? fmtFechaStr(fechaCertStr) : '—'}</td>
+        <td>${strSeg}</td>
+        <td>${strVenc}</td>
+        <td>${alerta}</td>
+      </tr>`;
+    };
+
+    const w = window.open('', '_blank', 'width=1000,height=700');
+    if (!w) { App.showToast('⚠️ El navegador bloqueó la ventana emergente. Actívala para generar el informe.'); return; }
+    w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+    <title>Informe Global Acreditación ACSA</title>
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 11px; color: #1a2332; padding: 24px; max-width: 1100px; margin: 0 auto; }
+      h1 { color: #1e3a5f; font-size: 16px; margin-bottom: 4px; }
+      h2 { font-size: 12px; font-weight: normal; color: #5a6a7a; margin-bottom: 8px; }
+      .meta { font-size: 10px; color: #5a6a7a; margin-bottom: 20px; }
+      .resumen { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+      .kpi { background: #e8edf2; border-radius: 8px; padding: 10px 18px; text-align: center; }
+      .kpi-val { font-size: 22px; font-weight: 700; color: #1e3a5f; }
+      .kpi-lbl { font-size: 10px; color: #5a6a7a; }
+      table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      th { background: #e8edf2; text-align: left; padding: 7px 8px; font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: #5a6a7a; }
+      td { padding: 7px 8px; border-bottom: 1px solid #e8edf2; vertical-align: top; }
+      tr:last-child td { border-bottom: none; }
+      .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e8edf2; font-size: 9px; color: #9e9890; text-align: center; }
+    </style>
+    </head><body>
+    <h1>Informe Global de Acreditación ACSA</h1>
+    <h2>Área de Gestión Sanitaria Sur de Córdoba</h2>
+    <div class="meta">📅 Generado el ${fecha}</div>
+    <div class="resumen">
+      <div class="kpi"><div class="kpi-val">${todasUGCs.length}</div><div class="kpi-lbl">Total UGCs</div></div>
+      <div class="kpi"><div class="kpi-val">${ugcsActivas.length}</div><div class="kpi-lbl">En proceso activo</div></div>
+      <div class="kpi"><div class="kpi-val">${UGCS.filter(u=>u.fase==='Seguimiento').length}</div><div class="kpi-lbl">En seguimiento</div></div>
+      <div class="kpi"><div class="kpi-val">${UGCS.filter(u=>u.fase==='Recertificación').length}</div><div class="kpi-lbl">En recertificación</div></div>
+    </div>
+    <table>
+      <thead><tr><th>Unidad</th><th>Fase</th><th>Nivel cert.</th><th>Certificación</th><th>Seguimiento</th><th>Vencimiento</th><th>Alerta</th></tr></thead>
+      <tbody>${todasUGCs.map(filaUGC).join('')}</tbody>
+    </table>
+    <div class="footer">Plataforma Mentoría ACSA · Área Calidad y Seguridad del Paciente · Generado el ${fecha}</div>
     </body></html>`);
     w.document.close();
     w.focus();

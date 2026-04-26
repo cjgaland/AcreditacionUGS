@@ -699,6 +699,7 @@ input:focus, select:focus, textarea:focus {
 .fase-activa { background: var(--green-light); color: var(--green); }
 .fase-recert { background: var(--amber-light); color: var(--amber); }
 .fase-eval   { background: var(--purple-light); color: var(--purple); }
+.fase-estab  { background: #fde0e0; color: #b03030; }
 
 /* Tabla */
 .tabla-acreditacion {

@@ -268,6 +268,22 @@
             <div class="kpi-val" id="kpi-mensajes-pend">—</div>
             <div class="kpi-label">Mensajes sin leer</div>
           </div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:#fde0e0;color:#b03030">🔔</div>
+            <div class="kpi-val" id="kpi-alertas">—</div>
+            <div class="kpi-label">Alertas activas</div>
+          </div>
+        </div>
+
+        <!-- Alertas de certificación -->
+        <div class="card">
+          <div class="card-head">
+            <h3>🔔 Alertas de certificación</h3>
+            <button class="btn-sm" onclick="App.generarInformeGlobal()">📊 Informe global</button>
+          </div>
+          <div id="panel-alertas-cert">
+            <div class="loading">Cargando alertas…</div>
+          </div>
         </div>
 
         <!-- Tabla resumen de UGCs en proceso -->
@@ -311,6 +327,7 @@
             <option value="Solicitud de Certificación">Solicitud de Certificación</option>
             <option value="Autoevaluación">Autoevaluación</option>
             <option value="Evaluación">Evaluación</option>
+            <option value="Pendiente de estabilización">Pendiente de estabilización</option>
             <option value="Seguimiento">Seguimiento</option>
             <option value="Recertificación">Recertificación</option>
           </select>
@@ -391,7 +408,11 @@
         </div>
         <div id="mi-progreso-card" class="progreso-card"></div>
         <div class="card" style="margin-top:20px">
-          <div class="card-head"><h3>📅 Próximas tareas</h3></div>
+          <div class="card-head"><h3>📅 Fechas clave del proceso</h3></div>
+          <div id="mi-fechas-body" style="padding:4px 0"><div class="loading">Cargando…</div></div>
+        </div>
+        <div class="card" style="margin-top:20px">
+          <div class="card-head"><h3>📌 Próximas tareas</h3></div>
           <div id="mis-tareas-list"><div class="loading">Cargando…</div></div>
         </div>
         <div class="card" style="margin-top:20px">

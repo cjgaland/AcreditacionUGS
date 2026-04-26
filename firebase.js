@@ -126,3 +126,25 @@ function fmtFechaHora(ts) {
   const d = ts.toDate ? ts.toDate() : new Date(ts);
   return d.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
+
+// ── Helper: certificación ACSA — calcula fechas clave a partir de la fecha de cert. ─
+function calcularFechasACSA(fechaStr) {
+  if (!fechaStr) return null;
+  const cert = new Date(fechaStr.includes('T') ? fechaStr : fechaStr + 'T00:00:00');
+  if (isNaN(cert.getTime())) return null;
+  const hoy  = new Date();
+  const seg  = new Date(cert); seg.setMonth(seg.getMonth() + 30);   // 2,5 años
+  const venc = new Date(cert); venc.setFullYear(venc.getFullYear() + 5);
+  const renovar = new Date(venc); renovar.setFullYear(renovar.getFullYear() - 1);
+  const diasHastaVenc = Math.round((venc - hoy) / 86400000);
+  const diasHastaSeg  = Math.round((seg  - hoy) / 86400000);
+  return { cert, seg, venc, renovar, diasHastaVenc, diasHastaSeg };
+}
+
+// ── Helper: formatea cadena YYYY-MM-DD a dd/mm/aaaa ────────────────────────────────
+function fmtFechaStr(str) {
+  if (!str) return '—';
+  const d = new Date(str.includes('T') ? str : str + 'T00:00:00');
+  if (isNaN(d.getTime())) return str;
+  return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
