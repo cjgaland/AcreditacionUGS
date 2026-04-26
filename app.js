@@ -444,36 +444,36 @@ const App = {
     if (nv.nivel === 'En Proceso') {
       siguiente = 'Avanzado'; color = '#2d7a4f';
       const faltanOblig = nv.totalObligatorios - nv.cumpleObligatorios;
-      pasos.push(faltanOblig > 0 ? 
-        `<li>✗ <strong>${faltanOblig} obligatorio${faltanOblig > 1 ? 's' : ''} pendiente${faltanOblig > 1 ? 's' : ''}</strong> (${nv.cumpleObligatorios}/${nv.totalObligatorios})</li>`
-        : '<li>✅ Todos los obligatorios cumplidos</li>');
+      const sOb = faltanOblig > 1 ? 's' : '';
+      const txOb = `<strong>${faltanOblig} obligatorio${sOb} pendiente${sOb}</strong> (${nv.cumpleObligatorios}/${nv.totalObligatorios})`;
+      pasos.push(faltanOblig > 0 ? `<li>✗ ${txOb}</li>` : '<li>✅ Todos los obligatorios cumplidos</li>');
       const minGI = Math.ceil(nv.totalGI * 0.70);
       const faltanGI = Math.max(0, minGI - nv.cumpleGI);
-      pasos.push(faltanGI > 0 ? 
-        `<li>✗ <strong>${faltanGI} estándar${faltanGI > 1 ? 'es' : ''} más de Grupo I</strong> (${nv.cumpleGI}/${nv.totalGI} · mínimo 70% = ${minGI})</li>`
-        : '<li>✅ Grupo I al 70% cumplido</li>');
+      const sGI1 = faltanGI > 1 ? 'es' : '';
+      const txGI1 = `<strong>${faltanGI} estándar${sGI1} más de Grupo I</strong> (${nv.cumpleGI}/${nv.totalGI} · mínimo 70% = ${minGI})`;
+      pasos.push(faltanGI > 0 ? `<li>✗ ${txGI1}</li>` : '<li>✅ Grupo I al 70% cumplido</li>');
     } else if (nv.nivel === 'Avanzado') {
       siguiente = 'Óptimo'; color = '#1e5b8c';
       const faltanGI = nv.totalGI - nv.cumpleGI;
-      pasos.push(faltanGI > 0 ? 
-        `<li>✗ <strong>${faltanGI} estándar${faltanGI > 1 ? 'es' : ''} de Grupo I</strong> pendientes (${nv.cumpleGI}/${nv.totalGI})</li>`
-        : '<li>✅ Grupo I al 100% cumplido</li>');
+      const sGI2 = faltanGI > 1 ? 'es' : '';
+      const txGI2 = `<strong>${faltanGI} estándar${sGI2} de Grupo I</strong> pendientes (${nv.cumpleGI}/${nv.totalGI})`;
+      pasos.push(faltanGI > 0 ? `<li>✗ ${txGI2}</li>` : '<li>✅ Grupo I al 100% cumplido</li>');
       const minGII = Math.ceil(nv.totalGII * 0.40);
       const faltanGII = Math.max(0, minGII - nv.cumpleGII);
-      pasos.push(faltanGII > 0 ? 
-        `<li>✗ <strong>${faltanGII} estándar${faltanGII > 1 ? 'es' : ''} más de Grupo II</strong> (${nv.cumpleGII}/${nv.totalGII} · mínimo 40% = ${minGII})</li>`
-        : '<li>✅ Grupo II al 40% cumplido</li>');
+      const sGII1 = faltanGII > 1 ? 'es' : '';
+      const txGII1 = `<strong>${faltanGII} estándar${sGII1} más de Grupo II</strong> (${nv.cumpleGII}/${nv.totalGII} · mínimo 40% = ${minGII})`;
+      pasos.push(faltanGII > 0 ? `<li>✗ ${txGII1}</li>` : '<li>✅ Grupo II al 40% cumplido</li>');
     } else if (nv.nivel === 'Óptimo') {
       siguiente = 'Excelente'; color = '#5c2d7a';
       const faltanGII = nv.totalGII - nv.cumpleGII;
-      pasos.push(faltanGII > 0 ? 
-        `<li>✗ <strong>${faltanGII} estándar${faltanGII > 1 ? 'es' : ''} de Grupo II</strong> pendientes (${nv.cumpleGII}/${nv.totalGII})</li>`
-        : '<li>✅ Grupo II al 100% cumplido</li>');
+      const sGII2 = faltanGII > 1 ? 'es' : '';
+      const txGII2 = `<strong>${faltanGII} estándar${sGII2} de Grupo II</strong> pendientes (${nv.cumpleGII}/${nv.totalGII})`;
+      pasos.push(faltanGII > 0 ? `<li>✗ ${txGII2}</li>` : '<li>✅ Grupo II al 100% cumplido</li>');
       const minGIII = Math.ceil(nv.totalGIII * 0.40);
       const faltanGIII = Math.max(0, minGIII - nv.cumpleGIII);
-      pasos.push(faltanGIII > 0 ? 
-        `<li>✗ <strong>${faltanGIII} estándar${faltanGIII > 1 ? 'es' : ''} más de Grupo III</strong> (${nv.cumpleGIII}/${nv.totalGIII} · mínimo 40% = ${minGIII})</li>`
-        : '<li>✅ Grupo III al 40% cumplido</li>');
+      const sGIII = faltanGIII > 1 ? 'es' : '';
+      const txGIII = `<strong>${faltanGIII} estándar${sGIII} más de Grupo III</strong> (${nv.cumpleGIII}/${nv.totalGIII} · mínimo 40% = ${minGIII})`;
+      pasos.push(faltanGIII > 0 ? `<li>✗ ${txGIII}</li>` : '<li>✅ Grupo III al 40% cumplido</li>');
     }
 
     return `<div class="roadmap-card" style="border-color:${color}">

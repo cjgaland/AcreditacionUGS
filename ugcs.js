@@ -780,7 +780,7 @@ const UGCS = [
     "ambito_label": "Atención Hospitalaria"
   },
   {
-    "id": "Ho_Mo_Me_18",
+    "id": "Ho_Mo_Me_17",
     "denominacion": "UGC UCI Montilla",
     "ubicacion": "Hospital de Montilla",
     "codigo_acsa": "",
@@ -972,7 +972,7 @@ const UGCS = [
     "fecha_fin": null,
     "proyectos_anteriores": "",
     "direccion": "Cl. Mariano Fuentes 6 - 14840",
-    "telefono1": "9579676",
+    "telefono1": "957379676",
     "telefono2": "957379675",
     "correo": "",
     "web": "https://lc.cx/6j7wwS",

@@ -67,6 +67,7 @@ async function recuperarPassword() {
 }
 
 async function logout() {
+  if (_unsubPerfilListener) { _unsubPerfilListener(); _unsubPerfilListener = null; }
   _cancelarListeners();
   try {
     await auth.signOut();
@@ -81,7 +82,10 @@ async function logout() {
 // ═════════════════════════════════════════════════════════════════
 
 auth.onAuthStateChanged(async user => {
-  if (!user) { currentUser = null; currentPerfil = null; mostrarPantallaLogin(); return; }
+  if (!user) {
+    if (_unsubPerfilListener) { _unsubPerfilListener(); _unsubPerfilListener = null; }
+    currentUser = null; currentPerfil = null; mostrarPantallaLogin(); return;
+  }
 
   if (!user.email.endsWith(DOMINIO_PERMITIDO)) {
     await auth.signOut();
@@ -114,6 +118,16 @@ auth.onAuthStateChanged(async user => {
 
     ocultarPantallaLogin();
     gestionarRol(currentPerfil);
+
+    if (_unsubPerfilListener) { _unsubPerfilListener(); _unsubPerfilListener = null; }
+    _unsubPerfilListener = db.collection(COL.usuarios).doc(user.uid)
+      .onSnapshot(snap => {
+        if (!snap.exists) return;
+        const nuevo = snap.data();
+        const cambio = nuevo.rol !== currentPerfil.rol || nuevo.ugc_id !== currentPerfil.ugc_id;
+        currentPerfil = nuevo;
+        if (cambio) gestionarRol(currentPerfil);
+      });
 
   } catch (err) {
     console.error('Error cargando perfil:', err);
@@ -239,8 +253,9 @@ async function comprobarEstadoPendiente() {
 //   NOTIFICACIONES
 // ═════════════════════════════════════════════════════════════════
 
-let _unsubNotifUGC   = null;
-let _unsubNotifAdmin = null;
+let _unsubNotifUGC      = null;
+let _unsubNotifAdmin    = null;
+let _unsubPerfilListener = null;
 
 function _cancelarListeners() {
   if (_unsubNotifUGC)   { _unsubNotifUGC();   _unsubNotifUGC   = null; }
