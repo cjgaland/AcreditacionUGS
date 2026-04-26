@@ -230,26 +230,29 @@ const App = {
       document.getElementById('kpi-reuniones').textContent = '—';
     }
 
-    // Propuestos pendientes
+    // Propuestos pendientes — query por UGC activa (evita índice collectionGroup)
     try {
       const propuestosEl = document.getElementById('lista-propuestos');
-      const snap = await db.collectionGroup('estandares')
-        .where('estado', '==', 'propuesto')
-        .limit(20)
-        .get();
+      const snaps = await Promise.all(
+        activas.map(u => db.collection(COL.ugcs).doc(u.id)
+          .collection('estandares').where('estado', '==', 'propuesto').get())
+      );
 
-      if (snap.empty) {
+      const allDocs = [];
+      snaps.forEach((snap, i) => {
+        snap.forEach(doc => allDocs.push({ doc, ugcId: activas[i].id }));
+      });
+      allDocs.sort((a, b) => {
+        const ta = a.doc.data().propuesto_en ? a.doc.data().propuesto_en.toMillis() : 0;
+        const tb = b.doc.data().propuesto_en ? b.doc.data().propuesto_en.toMillis() : 0;
+        return tb - ta;
+      });
+
+      if (!allDocs.length) {
         propuestosEl.innerHTML = '<div class="empty-state"><p>✅ No hay estándares pendientes de validación.</p></div>';
       } else {
-        const docs = [...snap.docs].sort((a, b) => {
-          const ta = a.data().propuesto_en ? a.data().propuesto_en.toMillis() : 0;
-          const tb = b.data().propuesto_en ? b.data().propuesto_en.toMillis() : 0;
-          return tb - ta;
-        });
-        propuestosEl.innerHTML = docs.map(doc => {
+        propuestosEl.innerHTML = allDocs.slice(0, 20).map(({ doc, ugcId }) => {
           const d = doc.data();
-          const path = doc.ref.path.split('/');
-          const ugcId = path[1];
           const ugc = UGCS.find(u => u.id === ugcId);
           const est = (typeof STANDARDS !== 'undefined') ? STANDARDS.find(s => s.codigo === doc.id) : null;
           return `
