@@ -9,6 +9,7 @@
   <link rel="icon" type="image/x-icon"   href="Assets/Favicons/favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="Assets/Favicons/favicon_32.png">
   <link rel="apple-touch-icon" sizes="180x180"    href="Assets/Favicons/favicon_180.png">
+  <link rel="manifest" href="manifest.json">
 
   <!-- ── PWA META ── -->
   <meta name="application-name" content="Mentoría ACSA">
@@ -474,6 +475,18 @@
 
     </main>
   </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     OVERLAY INFORME (PWA-safe, sin window.open)
+══════════════════════════════════════════════════════ -->
+<div id="overlay-informe">
+  <div class="informe-acciones">
+    <button class="btn-outline" onclick="App.cerrarInforme()">← Volver</button>
+    <span class="informe-titulo" id="overlay-informe-titulo"></span>
+    <button class="btn-primary" onclick="App.imprimirInforme()">🖨️ Imprimir / PDF</button>
+  </div>
+  <iframe id="informe-iframe" title="Informe"></iframe>
 </div>
 
 <!-- ══════════════════════════════════════════════════════

@@ -197,21 +197,22 @@ const App = {
       tablaEl.innerHTML = '<div class="empty-state"><p>No hay UGCs en proceso activo.</p></div>';
     } else {
       tablaEl.innerHTML = `
+        <div style="overflow-x:auto">
         <table class="tabla-acreditacion">
           <thead><tr>
-            <th>Unidad</th><th>Fase</th><th>Estado</th><th>Nivel</th><th></th>
+            <th>Unidad</th><th>Fase</th><th>Estado</th><th>Nivel</th>
           </tr></thead>
           <tbody>
             ${activas.map(u => `
-              <tr id="dash-row-${u.id}">
+              <tr id="dash-row-${u.id}" onclick="App.abrirFichaUGC('${u.id}')">
                 <td><strong>${u.denominacion}</strong><br><small style="color:var(--text3)">${u.ubicacion}</small></td>
                 <td>${App._faseBadge(u.fase)}</td>
                 <td><small>${u.estado_fase || '—'}</small></td>
                 <td id="dash-nivel-${u.id}"><span style="color:var(--text3)">—</span></td>
-                <td><button class="btn-sm" onclick="App.abrirFichaUGC('${u.id}')">Ver →</button></td>
               </tr>`).join('')}
           </tbody>
-        </table>`;
+        </table>
+        </div>`;
 
       // Cargar nivel de cada UGC activa en paralelo
       activas.forEach(u => App._cargarNivelDashboard(u.id));
@@ -234,14 +235,18 @@ const App = {
       const propuestosEl = document.getElementById('lista-propuestos');
       const snap = await db.collectionGroup('estandares')
         .where('estado', '==', 'propuesto')
-        .orderBy('propuesto_en', 'desc')
         .limit(20)
         .get();
 
       if (snap.empty) {
         propuestosEl.innerHTML = '<div class="empty-state"><p>✅ No hay estándares pendientes de validación.</p></div>';
       } else {
-        propuestosEl.innerHTML = snap.docs.map(doc => {
+        const docs = [...snap.docs].sort((a, b) => {
+          const ta = a.data().propuesto_en ? a.data().propuesto_en.toMillis() : 0;
+          const tb = b.data().propuesto_en ? b.data().propuesto_en.toMillis() : 0;
+          return tb - ta;
+        });
+        propuestosEl.innerHTML = docs.map(doc => {
           const d = doc.data();
           const path = doc.ref.path.split('/');
           const ugcId = path[1];
@@ -1799,12 +1804,9 @@ const App = {
 
     const estandaresConEstado = typeof STANDARDS !== 'undefined' ? STANDARDS.map(s => ({ ...s, estado: estadosMap[s.codigo] ? estadosMap[s.codigo].estado : 'pendiente' })) : [];
     const nivel = calcularNivel(estandaresConEstado);
-
-    const w = window.open('', '_blank', 'width=800,height=700');
-    if (!w) { App.showToast('⚠️ El navegador bloqueó la ventana emergente. Actívala para generar el informe.'); return; }
     const fecha = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
 
-    w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
     <title>Informe ${ugc ? ugc.denominacion : ugcId}</title>
     <style>
       body { font-family: Arial, sans-serif; font-size: 12px; color: #1a2332; padding: 32px; max-width: 800px; margin: 0 auto; }
@@ -1867,10 +1869,9 @@ const App = {
       </tbody>
     </table>
     <div class="footer">Área de Gestión Sanitaria Sur de Córdoba · Área de Calidad y Seguridad del Paciente · Generado el ${fecha}</div>
-    </body></html>`);
-    w.document.close();
-    w.focus();
-    setTimeout(() => w.print(), 500);
+    </body></html>`;
+
+    App._mostrarInformeEnApp('Informe de acreditación', html);
   },
 
   /* ══════════════════════════════════════════════════
@@ -1934,9 +1935,7 @@ const App = {
       </tr>`;
     };
 
-    const w = window.open('', '_blank', 'width=1000,height=700');
-    if (!w) { App.showToast('⚠️ El navegador bloqueó la ventana emergente. Actívala para generar el informe.'); return; }
-    w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
     <title>Informe Global Acreditación ACSA</title>
     <style>
       body { font-family: Arial, sans-serif; font-size: 11px; color: #1a2332; padding: 24px; max-width: 1100px; margin: 0 auto; }
@@ -1968,10 +1967,32 @@ const App = {
       <tbody>${todasUGCs.map(filaUGC).join('')}</tbody>
     </table>
     <div class="footer">Plataforma Mentoría ACSA · Área Calidad y Seguridad del Paciente · Generado el ${fecha}</div>
-    </body></html>`);
-    w.document.close();
-    w.focus();
-    setTimeout(() => w.print(), 500);
+    </body></html>`;
+
+    App._mostrarInformeEnApp('Informe global ACSA', html);
+  },
+
+  /* ══════════════════════════════════════════════════
+     OVERLAY INFORME (PWA-safe)
+  ══════════════════════════════════════════════════ */
+  _mostrarInformeEnApp(titulo, html) {
+    const overlay = document.getElementById('overlay-informe');
+    const iframe  = document.getElementById('informe-iframe');
+    const tituloEl = document.getElementById('overlay-informe-titulo');
+    if (tituloEl) tituloEl.textContent = titulo || '';
+    iframe.srcdoc = html;
+    overlay.style.display = 'flex';
+  },
+
+  imprimirInforme() {
+    const iframe = document.getElementById('informe-iframe');
+    if (iframe && iframe.contentWindow) iframe.contentWindow.print();
+  },
+
+  cerrarInforme() {
+    const overlay = document.getElementById('overlay-informe');
+    overlay.style.display = 'none';
+    document.getElementById('informe-iframe').srcdoc = '';
   },
 
   /* ══════════════════════════════════════════════════

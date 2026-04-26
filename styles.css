@@ -1214,3 +1214,39 @@ mark {
   .brand-sub { display: none; }
   .modal { padding: 20px 16px; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   OVERLAY INFORME (PWA-safe: sin window.open)
+══════════════════════════════════════════════════════════════ */
+#overlay-informe {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: #fff;
+  flex-direction: column;
+}
+.informe-acciones {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.informe-acciones .informe-titulo {
+  font-weight: 600;
+  color: var(--text1);
+  margin-right: auto;
+  font-size: 14px;
+}
+#informe-iframe {
+  flex: 1;
+  border: none;
+  width: 100%;
+}
+
+/* tabla del dashboard: filas clicables */
+.tabla-acreditacion tbody tr { cursor: pointer; }
+.tabla-acreditacion tbody tr:hover { background: var(--bg2); }
