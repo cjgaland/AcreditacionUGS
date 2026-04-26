@@ -403,25 +403,7 @@
           <h2>Mis Estándares</h2>
           <span class="view-sub">76 estándares · Manual ACSA UGC</span>
         </div>
-        <div class="filter-bar">
-          <div class="search-wrap-m">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input type="text" id="est-search" placeholder="Buscar estándar…" oninput="App.filtrarMisEstandares()">
-          </div>
-          <select id="est-filtro-estado" onchange="App.filtrarMisEstandares()">
-            <option value="">Todos los estados</option>
-            <option value="cumple">✅ Cumple</option>
-            <option value="propuesto">⏳ Propuesto</option>
-            <option value="pendiente">⭕ Pendiente</option>
-          </select>
-          <select id="est-filtro-grupo" onchange="App.filtrarMisEstandares()">
-            <option value="">Todos los grupos</option>
-            <option value="I">Grupo I</option>
-            <option value="II">Grupo II</option>
-            <option value="III">Grupo III</option>
-          </select>
-        </div>
-        <div id="mis-estandares-list"><div class="loading">Cargando estándares…</div></div>
+        <div id="mis-estandares-wrap"><div class="loading">Cargando estándares…</div></div>
       </div>
 
       <!-- ════ VISTA: REUNIONES (UGC) ════ -->
@@ -441,7 +423,12 @@
         </div>
         <div id="mis-mensajes-list" class="mensajes-list"></div>
         <div class="mensaje-compose">
-          <h4>Nuevo mensaje</h4>
+          <h4 id="msg-compose-titulo">Nuevo mensaje</h4>
+          <div id="msg-respondiendo" class="msg-respondiendo" style="display:none">
+            💬 Respondiendo a un hilo existente
+            <button onclick="App.cancelarRespuesta()" style="background:none;border:none;color:var(--accent2);cursor:pointer;font-size:12px;margin-left:auto">✕ Cancelar</button>
+          </div>
+          <input type="hidden" id="msg-hilo-id" value="">
           <select id="msg-tipo">
             <option value="consulta">💬 Consulta</option>
             <option value="incidencia">⚠️ Incidencia</option>

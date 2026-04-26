@@ -35,6 +35,9 @@ const App = {
   _estandaresAdminData:    null,
   _estandaresAdminFiltros: { q: '', oblig: '', grupo: '', criterio: '', estado: '' },
   _estandaresAdminIdx:     [],
+  _misEstandaresData:    null,
+  _misEstandaresFiltros: { q: '', oblig: '', grupo: '', criterio: '', estado: '' },
+  _misEstandaresIdx:     [],
 
   /* ── Inicialización tras login ──────────────────── */
   async mostrarPanelAdmin(perfil) {
@@ -400,7 +403,8 @@ const App = {
           ${App._barraProgreso('Grupo I',  nivel.cumpleGI,   nivel.totalGI,   '#2d7a4f', nivel.pctGI)}
           ${App._barraProgreso('Grupo II', nivel.cumpleGII,  nivel.totalGII,  '#1e5b8c', nivel.pctGII)}
           ${App._barraProgreso('Grupo III',nivel.cumpleGIII, nivel.totalGIII, '#5c2d7a', nivel.pctGIII)}
-        </div>`;
+        </div>
+        ${App._roadmapHtml(nivel)}`;
     } catch(e) {
       el.innerHTML = '<p style="color:var(--text2);font-size:13px">Error al cargar progreso.</p>';
     }
@@ -417,6 +421,59 @@ const App = {
           <div class="progress-bar-fill" style="width:${pct}%;background:${color}"></div>
         </div>
       </div>`;
+  },
+
+  _roadmapHtml(nv) {
+    if (nv.nivel === 'Excelente') {
+      return `<div class="roadmap-card" style="border-color:#5c2d7a">
+        <div class="roadmap-titulo" style="color:#5c2d7a">🏆 Nivel máximo alcanzado</div>
+        <p style="color:var(--text2);font-size:13px;margin:4px 0 0">La UGC ha completado todos los requisitos de certificación ACSA.</p>
+      </div>`;
+    }
+
+    const pasos = [];
+    let siguiente = '';
+    let color = '#9e9890';
+
+    if (nv.nivel === 'En Proceso') {
+      siguiente = 'Avanzado'; color = '#2d7a4f';
+      const faltanOblig = nv.totalObligatorios - nv.cumpleObligatorios;
+      pasos.push(faltanOblig > 0 ? 
+        `<li>✗ <strong>${faltanOblig} obligatorio${faltanOblig > 1 ? 's' : ''} pendiente${faltanOblig > 1 ? 's' : ''}</strong> (${nv.cumpleObligatorios}/${nv.totalObligatorios})</li>`
+        : '<li>✅ Todos los obligatorios cumplidos</li>');
+      const minGI = Math.ceil(nv.totalGI * 0.70);
+      const faltanGI = Math.max(0, minGI - nv.cumpleGI);
+      pasos.push(faltanGI > 0 ? 
+        `<li>✗ <strong>${faltanGI} estándar${faltanGI > 1 ? 'es' : ''} más de Grupo I</strong> (${nv.cumpleGI}/${nv.totalGI} · mínimo 70% = ${minGI})</li>`
+        : '<li>✅ Grupo I al 70% cumplido</li>');
+    } else if (nv.nivel === 'Avanzado') {
+      siguiente = 'Óptimo'; color = '#1e5b8c';
+      const faltanGI = nv.totalGI - nv.cumpleGI;
+      pasos.push(faltanGI > 0 ? 
+        `<li>✗ <strong>${faltanGI} estándar${faltanGI > 1 ? 'es' : ''} de Grupo I</strong> pendientes (${nv.cumpleGI}/${nv.totalGI})</li>`
+        : '<li>✅ Grupo I al 100% cumplido</li>');
+      const minGII = Math.ceil(nv.totalGII * 0.40);
+      const faltanGII = Math.max(0, minGII - nv.cumpleGII);
+      pasos.push(faltanGII > 0 ? 
+        `<li>✗ <strong>${faltanGII} estándar${faltanGII > 1 ? 'es' : ''} más de Grupo II</strong> (${nv.cumpleGII}/${nv.totalGII} · mínimo 40% = ${minGII})</li>`
+        : '<li>✅ Grupo II al 40% cumplido</li>');
+    } else if (nv.nivel === 'Óptimo') {
+      siguiente = 'Excelente'; color = '#5c2d7a';
+      const faltanGII = nv.totalGII - nv.cumpleGII;
+      pasos.push(faltanGII > 0 ? 
+        `<li>✗ <strong>${faltanGII} estándar${faltanGII > 1 ? 'es' : ''} de Grupo II</strong> pendientes (${nv.cumpleGII}/${nv.totalGII})</li>`
+        : '<li>✅ Grupo II al 100% cumplido</li>');
+      const minGIII = Math.ceil(nv.totalGIII * 0.40);
+      const faltanGIII = Math.max(0, minGIII - nv.cumpleGIII);
+      pasos.push(faltanGIII > 0 ? 
+        `<li>✗ <strong>${faltanGIII} estándar${faltanGIII > 1 ? 'es' : ''} más de Grupo III</strong> (${nv.cumpleGIII}/${nv.totalGIII} · mínimo 40% = ${minGIII})</li>`
+        : '<li>✅ Grupo III al 40% cumplido</li>');
+    }
+
+    return `<div class="roadmap-card" style="border-color:${color}">
+      <div class="roadmap-titulo" style="color:${color}">Hoja de ruta → ${siguiente}</div>
+      <ul class="roadmap-lista">${pasos.join('')}</ul>
+    </div>`;
   },
 
   async cargarEstandaresUGC(ugcId) {
@@ -601,38 +658,126 @@ const App = {
     }
   },
 
+  _agruparHilos(docs) {
+    const map = new Map();
+    docs.forEach(doc => {
+      const d      = doc.data();
+      const hiloId = d.hilo_id || doc.id;
+      if (!map.has(hiloId)) map.set(hiloId, { id: hiloId, msgs: [] });
+      map.get(hiloId).msgs.push({ id: doc.id, ...d });
+    });
+    map.forEach(h => h.msgs.sort((a, b) => {
+      const ta = a.fecha && a.fecha.toDate ? a.fecha.toDate().getTime() : 0;
+      const tb = b.fecha && b.fecha.toDate ? b.fecha.toDate().getTime() : 0;
+      return ta - tb;
+    }));
+    return [...map.values()].sort((a, b) => {
+      const last = h => h.msgs[h.msgs.length - 1];
+      const ta = last(a).fecha && last(a).fecha.toDate ? last(a).fecha.toDate().getTime() : 0;
+      const tb = last(b).fecha && last(b).fecha.toDate ? last(b).fecha.toDate().getTime() : 0;
+      return tb - ta;
+    });
+  },
+
+  _msgHtml(m) {
+    const esAdm = m.de_rol === 'admin';
+    return `
+      <div class="hilo-msg ${esAdm ? 'hilo-msg-admin' : ''}">
+        <div class="mensaje-head">
+          <span class="mensaje-de">${esAdm ? '🔑 ' : '🏥 '}${escHtml(m.de_nombre || m.de_uid)}</span>
+          <span class="mensaje-date">${fmtFechaHora(m.fecha)}</span>
+          ${m.tipo && !m.hilo_id ? `<span class="mensaje-tipo">${escHtml(m.tipo)}</span>` : ''}
+        </div>
+        ${m.estandar_ref ? `<div class="mensaje-estandar">📎 ${escHtml(m.estandar_ref)}</div>` : ''}
+        <div class="mensaje-texto">${escHtml(m.texto)}</div>
+      </div>`;
+  },
+
   async cargarMensajesUGC(ugcId) {
     const el = document.getElementById('tab-mensajes-ugc');
     if (!el) return;
     el.innerHTML = '<div class="loading">Cargando mensajes…</div>';
     try {
       const snap = await db.collection(COL.ugcs).doc(ugcId)
-        .collection('mensajes').orderBy('fecha', 'desc').limit(30).get();
+        .collection('mensajes').orderBy('fecha', 'asc').limit(60).get();
       if (snap.empty) {
         el.innerHTML = '<div class="empty-state"><p>Sin mensajes en esta unidad.</p></div>';
         return;
       }
-      el.innerHTML = snap.docs.map(doc => {
-        const d = doc.data();
+      const hilos = App._agruparHilos(snap.docs);
+      el.innerHTML = hilos.map(hilo => {
+        const [first, ...replies] = hilo.msgs;
+        const tieneNoLeido = hilo.msgs.some(m => !m.leido);
         return `
-          <div class="mensaje-card ${!d.leido ? 'unread' : ''}">
-            <div class="mensaje-head">
-              <span class="mensaje-de">${escHtml(d.de_nombre || d.de_uid)}</span>
-              <span class="mensaje-date">${fmtFechaHora(d.fecha)}</span>
-              <span class="mensaje-tipo">${escHtml(d.tipo || '')}</span>
-            </div>
-            <div class="mensaje-texto">${escHtml(d.texto)}</div>
-            ${d.estandar_ref ? `<div class="mensaje-estandar">📎 ${escHtml(d.estandar_ref)}</div>` : ''}
+          <div class="hilo-card ${tieneNoLeido ? 'unread' : ''}">
+            ${App._msgHtml(first)}
+            ${replies.length ? `<div class="hilo-replies">${replies.map(r => App._msgHtml(r)).join('')}</div>` : ''}
             <div class="mensaje-actions">
-              ${!d.leido ? `<button class="btn-sm" onclick="App.marcarLeido('${ugcId}','${doc.id}')">Marcar leído</button>` : ''}
-              <button class="btn-sm" onclick="App.responderMensaje('${ugcId}','${d.de_uid}','${escHtml(d.de_nombre||'')}')">Responder</button>
-              ${isAdmin() ? `<button class="btn-danger btn-sm" onclick="App.eliminarMensaje('${ugcId}','${doc.id}','ugc')">🗑</button>` : ''}
+              ${tieneNoLeido ? `<button class="btn-sm" onclick="App.marcarHiloLeido('${ugcId}','${hilo.id}','ugc')">Marcar leído</button>` : ''}
+              <button class="btn-sm" onclick="App.toggleReplyForm('${hilo.id}')">💬 Responder</button>
+              ${isAdmin() ? `<button class="btn-danger btn-sm" onclick="App.eliminarMensaje('${ugcId}','${first.id}','ugc')">🗑</button>` : ''}
+            </div>
+            <div class="hilo-reply-form" id="reply-form-${hilo.id}" style="display:none">
+              <textarea id="reply-text-${hilo.id}" rows="3" placeholder="Escribe tu respuesta…"></textarea>
+              <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
+                <button class="btn-secondary btn-sm" onclick="App.toggleReplyForm('${hilo.id}')">Cancelar</button>
+                <button class="btn-primary" onclick="App.enviarRespuestaAdmin('${ugcId}','${hilo.id}')">Enviar respuesta</button>
+              </div>
             </div>
           </div>`;
       }).join('');
     } catch(e) {
       el.innerHTML = '<div class="empty-state"><p>Error al cargar mensajes.</p></div>';
     }
+  },
+
+  toggleReplyForm(hiloId) {
+    const form = document.getElementById(`reply-form-${hiloId}`);
+    if (!form) return;
+    const visible = form.style.display !== 'none';
+    form.style.display = visible ? 'none' : 'block';
+    if (!visible) { const ta = document.getElementById(`reply-text-${hiloId}`); if(ta) ta.focus(); }
+  },
+
+  async enviarRespuestaAdmin(ugcId, hiloId) {
+    const ta     = document.getElementById(`reply-text-${hiloId}`);
+    const texto  = ta ? ta.value.trim() : '';
+    if (!texto) { App.showToast('Escribe una respuesta antes de enviar'); return; }
+    const perfil = getPerfil();
+    const msg = {
+      de_uid:      getUser().uid,
+      de_nombre:   perfil.nombre,
+      de_rol:      'admin',
+      para:        ugcId,
+      tipo:        'respuesta',
+      texto,
+      hilo_id:     hiloId,
+      estandar_ref: null,
+      fecha:       firebase.firestore.FieldValue.serverTimestamp(),
+      leido:       false,
+    };
+    try {
+      await db.collection(COL.ugcs).doc(ugcId).collection('mensajes').add(msg);
+      App.showToast('✅ Respuesta enviada');
+      App.cargarMensajesUGC(ugcId);
+    } catch(e) {
+      App.showToast('❌ Error al responder: ' + e.message);
+    }
+  },
+
+  async marcarHiloLeido(ugcId, hiloId, origen) {
+    try {
+      const snap = await db.collection(COL.ugcs).doc(ugcId)
+        .collection('mensajes')
+        .where('hilo_id', '==', hiloId).get();
+      const batch = db.batch();
+      // marcar el mensaje raíz también
+      batch.update(db.collection(COL.ugcs).doc(ugcId).collection('mensajes').doc(hiloId), { leido: true });
+      snap.forEach(doc => batch.update(doc.ref, { leido: true }));
+      await batch.commit();
+      if (origen === 'ugc') App.cargarMensajesUGC(ugcId);
+      else App.cargarMisMensajes();
+    } catch(e) { /* silencioso */ }
   },
 
   async eliminarMensaje(ugcId, msgId, origen) {
@@ -901,6 +1046,9 @@ const App = {
         App._estandaresAdminData.estadosMap[codigo] = { ...App._estandaresAdminData.estadosMap[codigo], ...data };
         App._renderEstandaresAdmin();
         await App._cargarProgresoUGC(ugcId, 'ficha-progreso');
+      } else if (App._misEstandaresData && App._misEstandaresData.ugcId === ugcId) {
+        App._misEstandaresData.estadosMap[codigo] = { ...App._misEstandaresData.estadosMap[codigo], ...data };
+        App._renderMisEstandares();
       } else if (App._ugcActual) {
         App.cargarEstandaresUGC(App._ugcActual);
       } else {
@@ -952,17 +1100,19 @@ const App = {
         const ugcId = path[1];
         const ugc = UGCS.find(u => u.id === ugcId);
         return `
-          <div class="mensaje-card ${!d.leido ? 'unread' : ''}">
-            <div class="mensaje-head">
-              <span class="mensaje-de">${escHtml(d.de_nombre || d.de_uid)} · <strong>${ugc ? ugc.denominacion : ugcId}</strong></span>
-              <span class="mensaje-date">${fmtFechaHora(d.fecha)}</span>
-              <span class="mensaje-tipo">${escHtml(d.tipo || '')}</span>
+          <div class="hilo-card ${!d.leido ? 'unread' : ''}">
+            <div class="hilo-msg">
+              <div class="mensaje-head">
+                <span class="mensaje-de">🏥 ${escHtml(d.de_nombre || d.de_uid)} · <strong>${ugc ? ugc.denominacion : ugcId}</strong></span>
+                <span class="mensaje-date">${fmtFechaHora(d.fecha)}</span>
+                ${d.tipo ? `<span class="mensaje-tipo">${escHtml(d.tipo)}</span>` : ''}
+              </div>
+              ${d.estandar_ref ? `<div class="mensaje-estandar">📎 ${escHtml(d.estandar_ref)}</div>` : ''}
+              <div class="mensaje-texto">${escHtml(d.texto)}</div>
             </div>
-            <div class="mensaje-texto">${escHtml(d.texto)}</div>
-            ${d.estandar_ref ? `<div class="mensaje-estandar">📎 ${escHtml(d.estandar_ref)}</div>` : ''}
             <div class="mensaje-actions">
               ${!d.leido ? `<button class="btn-sm" onclick="App.marcarLeido('${ugcId}','${doc.id}')">Marcar leído</button>` : ''}
-              <button class="btn-sm" onclick="App.abrirFichaUGC('${ugcId}')">Ver UGC →</button>
+              <button class="btn-sm" onclick="App.abrirFichaUGC('${ugcId}')">Ver conversación →</button>
               <button class="btn-danger btn-sm" onclick="App.eliminarMensaje('${ugcId}','${doc.id}','admin')">🗑</button>
             </div>
           </div>`;
@@ -980,27 +1130,26 @@ const App = {
     } catch(e) { /* silencioso */ }
   },
 
-  async responderMensaje(ugcId, deUid, deNombre) {
-    const perfil = getPerfil();
-    const texto  = `Hola ${deNombre || 'equipo'},\n\n`;
-    const msg = {
-      de_uid:      getUser().uid,
-      de_nombre:   perfil.nombre,
-      de_rol:      'admin',
-      para:        ugcId,
-      tipo:        'respuesta',
-      texto,
-      estandar_ref: null,
-      fecha:       firebase.firestore.FieldValue.serverTimestamp(),
-      leido:       false,
-    };
-    try {
-      await db.collection(COL.ugcs).doc(ugcId).collection('mensajes').add(msg);
-      App.showToast('✅ Respuesta enviada');
-      App.cargarMensajesUGC(ugcId);
-    } catch(e) {
-      App.showToast('❌ Error al responder: ' + e.message);
-    }
+  iniciarRespuestaUGC(hiloId) {
+    const inp   = document.getElementById('msg-hilo-id');
+    const ind   = document.getElementById('msg-respondiendo');
+    const titulo = document.getElementById('msg-compose-titulo');
+    if (inp)   inp.value = hiloId;
+    if (ind)   ind.style.display = 'flex';
+    if (titulo) titulo.textContent = 'Responder';
+    const compose = document.querySelector('.mensaje-compose');
+    if (compose) compose.scrollIntoView({ behavior: 'smooth' });
+    const ta = document.getElementById('msg-texto');
+    if (ta) { ta.focus(); }
+  },
+
+  cancelarRespuesta() {
+    const inp   = document.getElementById('msg-hilo-id');
+    const ind   = document.getElementById('msg-respondiendo');
+    const titulo = document.getElementById('msg-compose-titulo');
+    if (inp)   inp.value = '';
+    if (ind)   ind.style.display = 'none';
+    if (titulo) titulo.textContent = 'Nuevo mensaje';
   },
 
   async enviarMensaje() {
@@ -1009,6 +1158,7 @@ const App = {
     const tipo   = document.getElementById('msg-tipo').value;
     const texto  = document.getElementById('msg-texto').value.trim();
     const estRef = document.getElementById('msg-estandar').value.trim();
+    const hiloId = (document.getElementById('msg-hilo-id') || {}).value || null;
 
     if (!texto) { App.showToast('Escribe un mensaje antes de enviar'); return; }
 
@@ -1019,6 +1169,7 @@ const App = {
       para:        'admin',
       tipo,
       texto,
+      hilo_id:      hiloId || null,
       estandar_ref: estRef || null,
       fecha:       firebase.firestore.FieldValue.serverTimestamp(),
       leido:       false,
@@ -1028,6 +1179,7 @@ const App = {
       await db.collection(COL.ugcs).doc(ugcId).collection('mensajes').add(msg);
       document.getElementById('msg-texto').value    = '';
       document.getElementById('msg-estandar').value = '';
+      App.cancelarRespuesta();
       App.showToast('✅ Mensaje enviado');
       App.cargarMisMensajes();
     } catch(e) {
@@ -1077,59 +1229,133 @@ const App = {
   async cargarMisEstandares() {
     const perfil = getPerfil();
     const ugcId  = perfil.ugc_id;
-    const el     = document.getElementById('mis-estandares-list');
-    el.innerHTML = '<div class="loading">Cargando…</div>';
+    const wrap   = document.getElementById('mis-estandares-wrap');
+    if (!wrap) return;
+    wrap.innerHTML = '<div class="loading">Cargando…</div>';
 
     try {
-      const snap = await db.collection(COL.ugcs).doc(ugcId)
-        .collection('estandares').get();
-
+      const snap = await db.collection(COL.ugcs).doc(ugcId).collection('estandares').get();
       const estadosMap = {};
       snap.forEach(doc => { estadosMap[doc.id] = doc.data(); });
 
-      if (typeof STANDARDS === 'undefined') { el.innerHTML = '<p>STANDARDS no cargado.</p>'; return; }
+      if (typeof STANDARDS === 'undefined') { wrap.innerHTML = '<p>STANDARDS no cargado.</p>'; return; }
 
-      el.innerHTML = STANDARDS.map(s => {
-        const st = estadosMap[s.codigo] || { estado: 'pendiente' };
-        const dotClass = { cumple:'dot-cumple', propuesto:'dot-propuesto', pendiente:'dot-pendiente' }[st.estado] || 'dot-pendiente';
-        return `
-          <div class="estandar-item" onclick="App.abrirModalEstandar('${s.codigo}','${ugcId}')">
-            <div class="est-estado-dot ${dotClass}"></div>
-            <div class="est-info">
-              <span class="est-codigo">${s.codigo}</span>
-              <div class="est-enunciado">${s.enunciado}</div>
-            </div>
-            <div class="est-badges">
-              <span class="badge badge-g${s.grupo}">G${s.grupo}</span>
-              ${s.obligatorio === 'Si' ? '<span class="badge badge-oblig">Oblig.</span>' : ''}
-            </div>
-          </div>`;
-      }).join('');
+      App._misEstandaresIdx = STANDARDS.map(s => {
+        function collect(val) {
+          if (val === null || val === undefined) return '';
+          if (typeof val === 'string' || typeof val === 'number') return String(val);
+          if (Array.isArray(val)) return val.map(collect).join(' ');
+          if (typeof val === 'object') return Object.values(val).map(collect).join(' ');
+          return '';
+        }
+        return collect(s).toLowerCase();
+      });
 
-      App.filtrarMisEstandares();
+      App._misEstandaresData    = { ugcId, estadosMap };
+      App._misEstandaresFiltros = { q: '', oblig: '', grupo: '', criterio: '', estado: '' };
+
+      const criterios = [...new Map(
+        STANDARDS.map(s => [`${s.bloque_num}_${s.criterio_num}`, s])
+      ).values()].sort((a, b) => a.bloque_num - b.bloque_num || a.criterio_num - b.criterio_num);
+
+      wrap.innerHTML = `
+        <div class="filter-bar" style="margin-bottom:4px">
+          <div class="search-wrap-m">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="mef-search" placeholder="Buscar en cualquier campo…" oninput="App.filtrarMisEstandares()">
+          </div>
+          <select id="mef-oblig" onchange="App.filtrarMisEstandares()">
+            <option value="">Oblig. / No oblig.</option>
+            <option value="Si">Solo obligatorios</option>
+            <option value="No">No obligatorios</option>
+          </select>
+          <select id="mef-grupo" onchange="App.filtrarMisEstandares()">
+            <option value="">Todos los grupos</option>
+            <option value="I">Grupo I</option>
+            <option value="II">Grupo II</option>
+            <option value="III">Grupo III</option>
+          </select>
+          <select id="mef-criterio" onchange="App.filtrarMisEstandares()">
+            <option value="">Todos los criterios</option>
+            ${criterios.map(s => `<option value="${s.bloque_num}_${s.criterio_num}">B${s.bloque_num}·C${s.criterio_num} · ${escHtml(s.criterio_nombre)}</option>`).join('')}
+          </select>
+          <select id="mef-estado" onchange="App.filtrarMisEstandares()">
+            <option value="">Todos los estados</option>
+            <option value="cumple">✅ Cumple</option>
+            <option value="propuesto">⏳ Propuesto</option>
+            <option value="pendiente">⭕ Pendiente</option>
+          </select>
+        </div>
+        <div id="mef-count" style="font-size:12px;color:var(--text3);padding:4px 0 8px"></div>
+        <div id="mef-list"></div>`;
+
+      App._renderMisEstandares();
     } catch(e) {
-      el.innerHTML = '<div class="empty-state"><p>Error al cargar estándares.</p></div>';
+      wrap.innerHTML = '<div class="empty-state"><p>Error al cargar estándares.</p></div>';
     }
   },
 
   filtrarMisEstandares() {
-    // Filtrado en cliente sobre los items ya renderizados
-    const q      = (document.getElementById('est-search').value || '').toLowerCase();
-    const estado = document.getElementById('est-filtro-estado').value;
-    const grupo  = document.getElementById('est-filtro-grupo').value;
+    const g = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+    App._misEstandaresFiltros = {
+      q:        g('mef-search').toLowerCase(),
+      oblig:    g('mef-oblig'),
+      grupo:    g('mef-grupo'),
+      criterio: g('mef-criterio'),
+      estado:   g('mef-estado'),
+    };
+    App._renderMisEstandares();
+  },
 
-    document.querySelectorAll('#mis-estandares-list .estandar-item').forEach(item => {
-      const txt  = item.textContent.toLowerCase();
-      const dot  = item.querySelector('.est-estado-dot');
-      const dotC = dot ? dot.className : '';
-      const badgeG = item.querySelector('.badge');
+  _renderMisEstandares() {
+    const listEl  = document.getElementById('mef-list');
+    const countEl = document.getElementById('mef-count');
+    if (!listEl || !App._misEstandaresData) return;
 
-      const matchQ     = !q     || txt.includes(q);
-      const matchGrupo = !grupo || txt.includes('G' + grupo);
-      const matchEst   = !estado || dotC.includes('dot-' + estado);
+    const { ugcId, estadosMap } = App._misEstandaresData;
+    const { q, oblig, grupo, criterio, estado } = App._misEstandaresFiltros;
 
-      item.style.display = (matchQ && matchGrupo && matchEst) ? 'flex' : 'none';
+    const filtered = STANDARDS.filter((s, i) => {
+      if (oblig    && s.obligatorio !== oblig)                          return false;
+      if (grupo    && s.grupo       !== grupo)                          return false;
+      if (criterio && `${s.bloque_num}_${s.criterio_num}` !== criterio) return false;
+      const st = (estadosMap[s.codigo] || {}).estado || 'pendiente';
+      if (estado   && st !== estado)                                     return false;
+      if (q        && !App._misEstandaresIdx[i].includes(q))            return false;
+      return true;
     });
+
+    if (countEl) {
+      const cumpleN = filtered.filter(s => (estadosMap[s.codigo] || {}).estado === 'cumple').length;
+      countEl.textContent = `${filtered.length} de 76 estándares · ${cumpleN} cumplidos`;
+    }
+
+    if (!filtered.length) {
+      listEl.innerHTML = '<div class="empty-state"><p>Sin resultados con estos filtros.</p></div>';
+      return;
+    }
+
+    listEl.innerHTML = filtered.map(s => {
+      const st       = estadosMap[s.codigo] || { estado: 'pendiente' };
+      const estVal   = st.estado || 'pendiente';
+      const dotClass = { cumple: 'dot-cumple', propuesto: 'dot-propuesto', pendiente: 'dot-pendiente' }[estVal] || 'dot-pendiente';
+      const bdgClass = `badge-${estVal}`;
+      const bdgLabel = { cumple: '✅ Cumple', propuesto: '⏳ Propuesto', pendiente: '⭕ Pendiente' }[estVal] || '⭕ Pendiente';
+      return `
+        <div class="estandar-item" onclick="App.abrirModalEstandar('${s.codigo}','${ugcId}')">
+          <div class="est-estado-dot ${dotClass}"></div>
+          <div class="est-info">
+            <span class="est-codigo">${s.codigo}</span>
+            <div class="est-enunciado">${escHtml(s.enunciado)}</div>
+            <small style="color:var(--text3)">B${s.bloque_num} · ${escHtml(s.criterio_nombre)}</small>
+          </div>
+          <div class="est-badges">
+            <span class="badge badge-g${s.grupo}">G${s.grupo}</span>
+            ${s.obligatorio === 'Si' ? '<span class="badge badge-oblig">Oblig.</span>' : ''}
+            <span class="badge ${bdgClass}">${bdgLabel}</span>
+          </div>
+        </div>`;
+    }).join('');
   },
 
   async cargarReuniones() {
@@ -1177,22 +1403,27 @@ const App = {
 
     try {
       const snap = await db.collection(COL.ugcs).doc(ugcId)
-        .collection('mensajes').orderBy('fecha', 'desc').limit(30).get();
+        .collection('mensajes').orderBy('fecha', 'asc').limit(60).get();
 
-      el.innerHTML = snap.empty ? '<div class="empty-state"><h3>Sin mensajes</h3><p>Usa el formulario para contactar con el equipo de mentoría.</p></div>' : snap.docs.map(doc => {
-            const d = doc.data();
-            const esAdmin = d.de_rol === 'admin';
-            return `
-              <div class="mensaje-card ${!d.leido && !esAdmin ? 'unread' : ''}" style="${esAdmin ? 'border-left:3px solid var(--accent2)' : ''}">
-                <div class="mensaje-head">
-                  <span class="mensaje-de">${esAdmin ? '🔑 ' : ''}${escHtml(d.de_nombre || d.de_uid)}</span>
-                  <span class="mensaje-date">${fmtFechaHora(d.fecha)}</span>
-                  <span class="mensaje-tipo">${escHtml(d.tipo || '')}</span>
-                </div>
-                <div class="mensaje-texto">${escHtml(d.texto)}</div>
-                ${d.estandar_ref ? `<div class="mensaje-estandar">📎 ${escHtml(d.estandar_ref)}</div>` : ''}
-              </div>`;
-          }).join('');
+      if (snap.empty) {
+        el.innerHTML = '<div class="empty-state"><h3>Sin mensajes</h3><p>Usa el formulario para contactar con el equipo de mentoría.</p></div>';
+        return;
+      }
+
+      const hilos = App._agruparHilos(snap.docs);
+      el.innerHTML = hilos.map(hilo => {
+        const [first, ...replies] = hilo.msgs;
+        const tieneNoLeido = hilo.msgs.some(m => !m.leido && m.de_rol === 'admin');
+        return `
+          <div class="hilo-card ${tieneNoLeido ? 'unread' : ''}">
+            ${App._msgHtml(first)}
+            ${replies.length ? `<div class="hilo-replies">${replies.map(r => App._msgHtml(r)).join('')}</div>` : ''}
+            <div class="mensaje-actions">
+              ${tieneNoLeido ? `<button class="btn-sm" onclick="App.marcarHiloLeido('${ugcId}','${hilo.id}','mis')">Marcar leído</button>` : ''}
+              <button class="btn-sm" onclick="App.iniciarRespuestaUGC('${hilo.id}')">💬 Responder</button>
+            </div>
+          </div>`;
+      }).join('');
     } catch(e) {
       el.innerHTML = '<div class="empty-state"><p>Error al cargar mensajes.</p></div>';
     }

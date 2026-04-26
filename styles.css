@@ -585,6 +585,33 @@ input:focus, select:focus, textarea:focus {
   transition: width .6s ease;
 }
 
+/* Hoja de ruta de certificación */
+.roadmap-card {
+  margin-top: 20px;
+  padding: 16px 20px;
+  border-radius: var(--radius);
+  border-left: 4px solid var(--border);
+  background: var(--bg);
+}
+.roadmap-titulo {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.roadmap-lista {
+  margin: 0;
+  padding-left: 4px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text2);
+}
+.roadmap-lista li strong { color: var(--text1); }
+
 /* Filtros */
 .filter-bar {
   display: flex;
@@ -764,7 +791,56 @@ input:focus, select:focus, textarea:focus {
 .badge-pendiente { background: var(--surface2);     color: var(--text3); }
 
 /* Mensajes */
-.mensajes-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+.mensajes-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+
+/* Hilos de mensajes */
+.hilo-card {
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  transition: border-color .15s;
+}
+.hilo-card.unread { border-left: 3px solid var(--accent2); }
+.hilo-msg {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--bg);
+}
+.hilo-msg:last-child { border-bottom: none; }
+.hilo-msg-admin { background: transparent; }
+.hilo-msg-admin .mensaje-de::before { content: '🔑 '; }
+.hilo-replies {
+  margin-left: 16px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+  margin-top: 4px;
+}
+.hilo-reply-form {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.hilo-reply-form textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.msg-respondiendo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--accent2);
+  background: var(--accent-light);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+}
 
 .mensaje-card {
   background: var(--surface);
