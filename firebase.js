@@ -70,7 +70,6 @@ function calcularNivel(estandares) {
   const cumple = e => e.estado === 'cumple';
 
   const obligatorios = estandares.filter(e => e.obligatorio === 'Si');
-  const gI_noOblig   = estandares.filter(e => e.grupo === 'I'   && e.obligatorio === 'No');
   const gII          = estandares.filter(e => e.grupo === 'II');
   const gIII         = estandares.filter(e => e.grupo === 'III');
   const todosGI      = estandares.filter(e => e.grupo === 'I');

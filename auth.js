@@ -66,12 +66,14 @@ async function recuperarPassword() {
   }
 }
 
-function logout() {
-  auth.signOut().then(() => {
-    currentUser   = null;
-    currentPerfil = null;
-    mostrarPantallaLogin();
-  });
+async function logout() {
+  _cancelarListeners();
+  try {
+    await auth.signOut();
+  } catch(e) { /* silencioso: de todas formas limpiamos el estado local */ }
+  currentUser   = null;
+  currentPerfil = null;
+  mostrarPantallaLogin();
 }
 
 // ═════════════════════════════════════════════════════════════════
@@ -214,9 +216,36 @@ function mostrarPantallaPendiente(perfil) {
   document.getElementById('pending-email').textContent    = perfil.email;
 }
 
+async function comprobarEstadoPendiente() {
+  if (!currentUser) return;
+  const statusEl = document.getElementById('pending-status');
+  if (statusEl) statusEl.textContent = 'Comprobando…';
+  try {
+    const snap = await db.collection(COL.usuarios).doc(currentUser.uid).get();
+    if (!snap.exists) { if (statusEl) statusEl.textContent = 'No se encontró tu cuenta.'; return; }
+    currentPerfil = snap.data();
+    if (currentPerfil.rol !== 'pendiente') {
+      ocultarPantallaLogin();
+      gestionarRol(currentPerfil);
+    } else {
+      if (statusEl) statusEl.textContent = 'Tu cuenta sigue pendiente de activación.';
+    }
+  } catch(e) {
+    if (statusEl) statusEl.textContent = 'Error al comprobar. Inténtalo de nuevo.';
+  }
+}
+
 // ═════════════════════════════════════════════════════════════════
 //   NOTIFICACIONES
 // ═════════════════════════════════════════════════════════════════
+
+let _unsubNotifUGC   = null;
+let _unsubNotifAdmin = null;
+
+function _cancelarListeners() {
+  if (_unsubNotifUGC)   { _unsubNotifUGC();   _unsubNotifUGC   = null; }
+  if (_unsubNotifAdmin) { _unsubNotifAdmin(); _unsubNotifAdmin = null; }
+}
 
 function _actualizarBadge(n) {
   ['notif-badge','nav-badge-mensajes','nav-badge-mis-mensajes'].forEach(id => {
@@ -229,7 +258,8 @@ function _actualizarBadge(n) {
 
 function iniciarListenerNotificaciones(ugcId) {
   if (!ugcId) return;
-  db.collection(COL.ugcs).doc(ugcId)
+  _cancelarListeners();
+  _unsubNotifUGC = db.collection(COL.ugcs).doc(ugcId)
     .collection('mensajes')
     .where('para', '==', ugcId)
     .where('leido', '==', false)
@@ -237,7 +267,8 @@ function iniciarListenerNotificaciones(ugcId) {
 }
 
 function iniciarListenerNotificacionesAdmin() {
-  db.collectionGroup('mensajes')
+  _cancelarListeners();
+  _unsubNotifAdmin = db.collectionGroup('mensajes')
     .where('para', '==', 'admin')
     .where('leido', '==', false)
     .onSnapshot(snap => _actualizarBadge(snap.size));

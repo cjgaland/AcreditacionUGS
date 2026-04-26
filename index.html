@@ -65,7 +65,8 @@
       <!-- Confirmar contraseña (solo en registro) -->
       <div id="row-pass2" class="form-login" style="display:none">
         <label>Confirmar contraseña</label>
-        <input type="password" id="login-pass2" placeholder="••••••••" autocomplete="new-password">
+        <input type="password" id="login-pass2" placeholder="••••••••" autocomplete="new-password"
+               onkeydown="if(event.key==='Enter'){registrar();}">
       </div>
 
       <!-- Botones de acción -->
@@ -117,7 +118,9 @@
           Carlos Galán
         </a>
       </div>
-      <button class="btn-secondary" onclick="logout()">Cerrar sesión</button>
+      <button class="btn-secondary" onclick="comprobarEstadoPendiente()">🔄 Comprobar estado</button>
+      <button class="btn-secondary" style="margin-top:8px" onclick="logout()">Cerrar sesión</button>
+      <p id="pending-status" style="margin-top:12px;font-size:13px;color:var(--text2)"></p>
     </div>
   </div>
 </div>

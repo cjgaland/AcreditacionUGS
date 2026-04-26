@@ -14,6 +14,17 @@
 
 'use strict';
 
+function _buildSearchIdx(standards) {
+  function collect(val) {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'string' || typeof val === 'number') return String(val);
+    if (Array.isArray(val)) return val.map(collect).join(' ');
+    if (typeof val === 'object') return Object.values(val).map(collect).join(' ');
+    return '';
+  }
+  return standards.map(s => collect(s).toLowerCase());
+}
+
 function escHtml(str) {
   return String(str || '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -206,21 +217,14 @@ const App = {
       activas.forEach(u => App._cargarNivelDashboard(u.id));
     }
 
-    // KPI: reuniones este mes (consulta individual por UGC, sin índice collectionGroup)
+    // KPI: reuniones este mes (collectionGroup → 1 sola consulta)
     try {
-      const ahora     = new Date();
       const inicioMes = firebase.firestore.Timestamp.fromDate(
-        new Date(ahora.getFullYear(), ahora.getMonth(), 1)
+        new Date(new Date().getFullYear(), new Date().getMonth(), 1)
       );
-      let totalReuniones = 0;
-      await Promise.all(UGCS.map(u =>
-        db.collection(COL.ugcs).doc(u.id).collection('reuniones')
-          .where('fecha', '>=', inicioMes)
-          .get()
-          .then(s => { totalReuniones += s.size; })
-          .catch(() => {})
-      ));
-      document.getElementById('kpi-reuniones').textContent = totalReuniones;
+      const reunSnap = await db.collectionGroup('reuniones')
+        .where('fecha', '>=', inicioMes).get();
+      document.getElementById('kpi-reuniones').textContent = reunSnap.size;
     } catch(e) {
       document.getElementById('kpi-reuniones').textContent = '—';
     }
@@ -275,10 +279,11 @@ const App = {
   },
 
   async _cargarNivelDashboard(ugcId) {
-    const el = document.getElementById('dash-nivel-' + ugcId);
-    if (!el) return;
+    if (!document.getElementById('dash-nivel-' + ugcId)) return;
     try {
       const snap = await db.collection(COL.ugcs).doc(ugcId).collection('estandares').get();
+      const el = document.getElementById('dash-nivel-' + ugcId);
+      if (!el) return;
       if (snap.empty || typeof STANDARDS === 'undefined') { el.innerHTML = '<span style="color:var(--text3)">Sin datos</span>'; return; }
       const estadosMap = {};
       snap.forEach(doc => { estadosMap[doc.id] = doc.data().estado || 'pendiente'; });
@@ -286,7 +291,8 @@ const App = {
       const { nivel, color } = calcularNivel(lista);
       el.innerHTML = `<span style="font-size:12px;font-weight:700;color:${color}">${nivel}</span>`;
     } catch(e) {
-      el.innerHTML = '<span style="color:var(--text3)">—</span>';
+      const el = document.getElementById('dash-nivel-' + ugcId);
+      if (el) el.innerHTML = '<span style="color:var(--text3)">—</span>';
     }
   },
 
@@ -305,7 +311,7 @@ const App = {
     const filtradas = UGCS.filter(u => {
       if (fase   && u.fase   !== fase)   return false;
       if (ambito && u.ambito !== ambito) return false;
-      if (q && !`${u.denominacion} ${u.ubicacion}`.toLowerCase().includes(q)) return false;
+      if (q && !`${u.denominacion} ${u.ubicacion} ${u.codigo_acsa || ''}`.toLowerCase().includes(q)) return false;
       return true;
     });
     App._renderUGCsGrid(filtradas);
@@ -491,17 +497,7 @@ const App = {
         return;
       }
 
-      // Índice de búsqueda completo (igual que el buscador independiente)
-      App._estandaresAdminIdx = STANDARDS.map(s => {
-        function collect(val) {
-          if (val === null || val === undefined) return '';
-          if (typeof val === 'string' || typeof val === 'number') return String(val);
-          if (Array.isArray(val)) return val.map(collect).join(' ');
-          if (typeof val === 'object') return Object.values(val).map(collect).join(' ');
-          return '';
-        }
-        return collect(s).toLowerCase();
-      });
+      App._estandaresAdminIdx = _buildSearchIdx(STANDARDS);
 
       App._estandaresAdminData    = { ugcId, estadosMap };
       App._estandaresAdminFiltros = { q: '', oblig: '', grupo: '', criterio: '', estado: '' };
@@ -580,7 +576,7 @@ const App = {
 
     if (countEl) {
       const cumpleN = filtered.filter(s => (estadosMap[s.codigo] || {}).estado === 'cumple').length;
-      countEl.textContent = `${filtered.length} de 76 estándares · ${cumpleN} cumplidos`;
+      countEl.textContent = `${filtered.length} de ${STANDARDS.length} estándares · ${cumpleN} cumplidos`;
     }
 
     if (!filtered.length) {
@@ -775,7 +771,8 @@ const App = {
       batch.update(db.collection(COL.ugcs).doc(ugcId).collection('mensajes').doc(hiloId), { leido: true });
       snap.forEach(doc => batch.update(doc.ref, { leido: true }));
       await batch.commit();
-      if (origen === 'ugc') App.cargarMensajesUGC(ugcId);
+      if (origen === 'ugc')   App.cargarMensajesUGC(ugcId);
+      else if (origen === 'admin') App.cargarMensajesAdmin();
       else App.cargarMisMensajes();
     } catch(e) { /* silencioso */ }
   },
@@ -951,27 +948,30 @@ const App = {
   /* ══════════════════════════════════════════════════
      MODAL ESTÁNDAR
   ══════════════════════════════════════════════════ */
-  abrirModalEstandar(codigo, ugcId) {
+  async abrirModalEstandar(codigo, ugcId) {
     const est = typeof STANDARDS !== 'undefined' ? STANDARDS.find(s => s.codigo === codigo) : null;
     if (!est) return;
 
     const overlay = document.getElementById('modal-estandar');
     const content = document.getElementById('modal-estandar-content');
 
-    // Cargar estado actual
-    db.collection(COL.ugcs).doc(ugcId).collection('estandares').doc(codigo).get()
-      .then(doc => {
-        const d = doc.exists ? doc.data() : { estado: 'pendiente', evidencia_texto: '', documento_mejora_c: '' };
+    content.innerHTML = '<div class="loading">Cargando…</div>';
+    overlay.classList.add('open');
 
-        content.innerHTML = `
+    try {
+      const doc = await db.collection(COL.ugcs).doc(ugcId).collection('estandares').doc(codigo).get();
+      const d = doc.exists ? doc.data() : { estado: 'pendiente', evidencia_texto: '', documento_mejora_c: '' };
+      App._modalEstadoInicial = d.estado || 'pendiente';
+
+      content.innerHTML = `
           <div class="modal-est-codigo">${est.codigo}</div>
           <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
             <span class="badge badge-g${est.grupo}">Grupo ${est.grupo}</span>
             ${est.obligatorio === 'Si' ? '<span class="badge badge-oblig">Obligatorio</span>' : ''}
             <span class="badge badge-${d.estado || 'pendiente'}">${{cumple:'✅ Cumple',propuesto:'⏳ Propuesto',pendiente:'⭕ Pendiente'}[d.estado]||'Pendiente'}</span>
           </div>
-          <div class="modal-est-enunciado">${est.enunciado}</div>
-          <div class="modal-est-proposito">${est.proposito}</div>
+          <div class="modal-est-enunciado">${escHtml(est.enunciado)}</div>
+          <div class="modal-est-proposito">${escHtml(est.proposito)}</div>
 
           ${est.criterios_evaluables && est.criterios_evaluables.length ? `
           <div style="margin-bottom:14px">
@@ -979,7 +979,7 @@ const App = {
             ${est.criterios_evaluables.map((ce,i)=>`
               <div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border)">
                 <span style="font-size:11px;font-weight:700;color:var(--accent2);min-width:20px">${i+1}.</span>
-                <span style="font-size:13px;color:var(--text2);line-height:1.5">${ce.replace(/X$/,'')}</span>
+                <span style="font-size:13px;color:var(--text2);line-height:1.5">${escHtml(ce.replace(/X$/,''))}</span>
               </div>`).join('')}
           </div>` : ''}
 
@@ -991,9 +991,9 @@ const App = {
               <option value="propuesto" ${d.estado==='propuesto'?'selected':''}>⏳ Propuesto a cumple</option>
             </select>
             <label>Evidencia / descripción</label>
-            <textarea id="modal-est-evidencia" rows="3" placeholder="Describe brevemente la evidencia disponible en MejoraC…">${d.evidencia_texto || ''}</textarea>
+            <textarea id="modal-est-evidencia" rows="3" placeholder="Describe brevemente la evidencia disponible en MejoraC…">${escHtml(d.evidencia_texto || '')}</textarea>
             <label>Nombre del documento en MejoraC</label>
-            <input type="text" id="modal-est-documento" placeholder="Ej: PLAN_CALIDAD_2025.pdf" value="${d.documento_mejora_c || ''}">
+            <input type="text" id="modal-est-documento" placeholder="Ej: PLAN_CALIDAD_2025.pdf" value="${escHtml(d.documento_mejora_c || '')}">
           </div>
 
           ${d.validado_en ? `<div style="font-size:11px;color:var(--green);margin-bottom:14px">✅ Validado el ${fmtFecha(d.validado_en)}</div>` : ''}
@@ -1002,9 +1002,9 @@ const App = {
             <button class="btn-secondary" onclick="App.cerrarModal('modal-estandar')">Cancelar</button>
             <button class="btn-primary" onclick="App.guardarEstado('${ugcId}','${codigo}')">Guardar</button>
           </div>`;
-
-        overlay.classList.add('open');
-      });
+    } catch(e) {
+      content.innerHTML = '<div class="empty-state"><p>Error al cargar el estándar.</p></div>';
+    }
   },
 
   async guardarEstado(ugcId, codigo) {
@@ -1021,7 +1021,7 @@ const App = {
       actualizado_en:     firebase.firestore.FieldValue.serverTimestamp(),
     };
 
-    if (estado === 'propuesto') {
+    if (estado === 'propuesto' && App._modalEstadoInicial !== 'propuesto') {
       data.propuesto_en = firebase.firestore.FieldValue.serverTimestamp();
     }
     if (estado === 'cumple' && isAdmin()) {
@@ -1060,6 +1060,8 @@ const App = {
   },
 
   async validarEstandar(ugcId, codigo, aprobar) {
+    const accion = aprobar ? 'validar como ✅ Cumple' : 'devolver a ⭕ Pendiente';
+    if (!confirm(`¿${accion} el estándar ${codigo}?`)) return;
     const data = {
       estado: aprobar ? 'cumple' : 'pendiente',
       validado_en:  firebase.firestore.FieldValue.serverTimestamp(),
@@ -1094,40 +1096,40 @@ const App = {
         el.innerHTML = '<div class="empty-state"><h3>Sin mensajes</h3></div>';
         return;
       }
-      el.innerHTML = snap.docs.map(doc => {
-        const d = doc.data();
-        const path = doc.ref.path.split('/');
-        const ugcId = path[1];
-        const ugc = UGCS.find(u => u.id === ugcId);
+
+      // Mapear ugcId por mensaje (path: ugcs/{ugcId}/mensajes/{msgId})
+      const ugcPorMsgId = {};
+      snap.docs.forEach(doc => { ugcPorMsgId[doc.id] = doc.ref.path.split('/')[1]; });
+
+      const hilos = App._agruparHilos(snap.docs);
+
+      el.innerHTML = hilos.map(hilo => {
+        const [first, ...replies] = hilo.msgs;
+        const ugcId = ugcPorMsgId[hilo.id] || ugcPorMsgId[first.id];
+        const ugc   = UGCS.find(u => u.id === ugcId);
+        const tieneNoLeido = hilo.msgs.some(m => !m.leido);
         return `
-          <div class="hilo-card ${!d.leido ? 'unread' : ''}">
+          <div class="hilo-card ${tieneNoLeido ? 'unread' : ''}">
             <div class="hilo-msg">
               <div class="mensaje-head">
-                <span class="mensaje-de">🏥 ${escHtml(d.de_nombre || d.de_uid)} · <strong>${ugc ? ugc.denominacion : ugcId}</strong></span>
-                <span class="mensaje-date">${fmtFechaHora(d.fecha)}</span>
-                ${d.tipo ? `<span class="mensaje-tipo">${escHtml(d.tipo)}</span>` : ''}
+                <span class="mensaje-de">🏥 ${escHtml(first.de_nombre || first.de_uid)} · <strong>${ugc ? ugc.denominacion : ugcId}</strong></span>
+                <span class="mensaje-date">${fmtFechaHora(first.fecha)}</span>
+                ${first.tipo ? `<span class="mensaje-tipo">${escHtml(first.tipo)}</span>` : ''}
               </div>
-              ${d.estandar_ref ? `<div class="mensaje-estandar">📎 ${escHtml(d.estandar_ref)}</div>` : ''}
-              <div class="mensaje-texto">${escHtml(d.texto)}</div>
+              ${first.estandar_ref ? `<div class="mensaje-estandar">📎 ${escHtml(first.estandar_ref)}</div>` : ''}
+              <div class="mensaje-texto">${escHtml(first.texto)}</div>
             </div>
+            ${replies.length ? `<div class="hilo-replies">${replies.map(r => App._msgHtml(r)).join('')}</div>` : ''}
             <div class="mensaje-actions">
-              ${!d.leido ? `<button class="btn-sm" onclick="App.marcarLeido('${ugcId}','${doc.id}')">Marcar leído</button>` : ''}
+              ${tieneNoLeido ? `<button class="btn-sm" onclick="App.marcarHiloLeido('${ugcId}','${hilo.id}','admin')">Marcar leído</button>` : ''}
               <button class="btn-sm" onclick="App.abrirFichaUGC('${ugcId}')">Ver conversación →</button>
-              <button class="btn-danger btn-sm" onclick="App.eliminarMensaje('${ugcId}','${doc.id}','admin')">🗑</button>
+              <button class="btn-danger btn-sm" onclick="App.eliminarMensaje('${ugcId}','${first.id}','admin')">🗑</button>
             </div>
           </div>`;
       }).join('');
     } catch(e) {
       el.innerHTML = '<div class="empty-state"><p>Error al cargar mensajes.</p></div>';
     }
-  },
-
-  async marcarLeido(ugcId, msgId) {
-    try {
-      await db.collection(COL.ugcs).doc(ugcId)
-        .collection('mensajes').doc(msgId)
-        .update({ leido: true });
-    } catch(e) { /* silencioso */ }
   },
 
   iniciarRespuestaUGC(hiloId) {
@@ -1155,6 +1157,7 @@ const App = {
   async enviarMensaje() {
     const perfil = getPerfil();
     const ugcId  = perfil.ugc_id;
+    if (!ugcId) { App.showToast('Tu cuenta no tiene una UGC asignada. Contacta con el administrador.'); return; }
     const tipo   = document.getElementById('msg-tipo').value;
     const texto  = document.getElementById('msg-texto').value.trim();
     const estRef = document.getElementById('msg-estandar').value.trim();
@@ -1193,6 +1196,13 @@ const App = {
   async cargarMiEstado() {
     const perfil = getPerfil();
     const ugcId  = perfil.ugc_id;
+    if (!ugcId) {
+      document.getElementById('mi-ugc-nombre').textContent = 'Sin unidad asignada';
+      document.getElementById('mi-progreso-card').innerHTML = '<div class="empty-state"><p>Tu cuenta aún no tiene una unidad asignada. Contacta con el administrador.</p></div>';
+      document.getElementById('mis-tareas-list').innerHTML   = '';
+      document.getElementById('mis-reuniones-resumen').innerHTML = '';
+      return;
+    }
     const ugc    = UGCS.find(u => u.id === ugcId);
     if (ugc) document.getElementById('mi-ugc-nombre').textContent = ugc.denominacion + ' · ' + ugc.fase;
 
@@ -1240,16 +1250,7 @@ const App = {
 
       if (typeof STANDARDS === 'undefined') { wrap.innerHTML = '<p>STANDARDS no cargado.</p>'; return; }
 
-      App._misEstandaresIdx = STANDARDS.map(s => {
-        function collect(val) {
-          if (val === null || val === undefined) return '';
-          if (typeof val === 'string' || typeof val === 'number') return String(val);
-          if (Array.isArray(val)) return val.map(collect).join(' ');
-          if (typeof val === 'object') return Object.values(val).map(collect).join(' ');
-          return '';
-        }
-        return collect(s).toLowerCase();
-      });
+      App._misEstandaresIdx = _buildSearchIdx(STANDARDS);
 
       App._misEstandaresData    = { ugcId, estadosMap };
       App._misEstandaresFiltros = { q: '', oblig: '', grupo: '', criterio: '', estado: '' };
@@ -1327,7 +1328,7 @@ const App = {
 
     if (countEl) {
       const cumpleN = filtered.filter(s => (estadosMap[s.codigo] || {}).estado === 'cumple').length;
-      countEl.textContent = `${filtered.length} de 76 estándares · ${cumpleN} cumplidos`;
+      countEl.textContent = `${filtered.length} de ${STANDARDS.length} estándares · ${cumpleN} cumplidos`;
     }
 
     if (!filtered.length) {
@@ -1373,9 +1374,9 @@ const App = {
       }
       el.innerHTML = snap.docs.map(doc => {
         const d = doc.data();
-        const tareas = (d.tareas || []).map(t => `
+        const tareas = (d.tareas || []).map((t, i) => `
           <div class="tarea-item ${t.completada ? 'done' : ''}">
-            <input type="checkbox" class="tarea-check" ${t.completada ? 'checked' : ''} onchange="App.toggleTarea('${ugcId}','${doc.id}',${(d.tareas||[]).indexOf(t)},this.checked)">
+            <input type="checkbox" class="tarea-check" ${t.completada ? 'checked' : ''} onchange="App.toggleTarea('${ugcId}','${doc.id}',${i},this.checked)">
             <span>${escHtml(t.descripcion)}</span>
             ${t.responsable ? `<span style="color:var(--text3)">— ${escHtml(t.responsable)}</span>` : ''}
             ${t.plazo ? `<span style="color:var(--amber);margin-left:auto">${fmtFecha({toDate:()=>new Date(t.plazo)})}</span>` : ''}
@@ -1443,7 +1444,7 @@ const App = {
       }
       el.innerHTML = `
         <table class="tabla-acreditacion">
-          <thead><tr><th>Usuario</th><th>Email</th><th>Rol</th><th>UGC</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>Usuario</th><th>Email</th><th>Rol</th><th>UGC</th><th>Registro</th></tr></thead>
           <tbody>
             ${snap.docs.map(doc => {
               const d = doc.data();
@@ -1520,6 +1521,7 @@ const App = {
   async guardarReunion() {
     const ugcId = App._ugcActual || getPerfil().ugc_id;
     const fecha = document.getElementById('reunion-fecha').value;
+    if (!fecha) { App.showToast('⚠️ Selecciona una fecha para la reunión'); return; }
     const tipo  = document.getElementById('reunion-tipo').value;
     const partic= document.getElementById('reunion-participantes').value;
     const acuerdos = document.getElementById('reunion-acuerdos').value;
@@ -1607,6 +1609,7 @@ const App = {
     const nivel = calcularNivel(estandaresConEstado);
 
     const w = window.open('', '_blank', 'width=800,height=700');
+    if (!w) { App.showToast('⚠️ El navegador bloqueó la ventana emergente. Actívala para generar el informe.'); return; }
     const fecha = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
 
     w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
@@ -1662,7 +1665,7 @@ const App = {
           const st = estadosMap[s.codigo];
           return `<tr>
             <td><strong>${s.codigo}</strong></td>
-            <td>${s.enunciado}</td>
+            <td>${escHtml(s.enunciado)}</td>
             <td>G${s.grupo}</td>
             <td>${s.obligatorio}</td>
             <td class="${s.estado}">${{cumple:'✅ Cumple',propuesto:'⏳ Propuesto',pendiente:'⭕ Pendiente'}[s.estado]||'—'}</td>

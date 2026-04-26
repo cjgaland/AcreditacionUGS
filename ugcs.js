@@ -641,7 +641,7 @@ const UGCS = [
   },
   {
     "id": "Ho_Mo_Qx_10",
-    "denominacion": "UGC Genecología y Obstetricia Montilla",
+    "denominacion": "UGC Ginecología y Obstetricia Montilla",
     "ubicacion": "Hospital de Montilla",
     "codigo_acsa": "",
     "ambito": "UGC_AH",
@@ -981,7 +981,7 @@ const UGCS = [
   },
   {
     "id": "Ap_06",
-    "denominacion": "UGC Fenán Núñez",
+    "denominacion": "UGC Fernán Núñez",
     "ubicacion": "Centro de Salud Fernán Núñez",
     "codigo_acsa": "",
     "ambito": "UGC_AP",
@@ -1181,7 +1181,7 @@ const UGCS = [
   },
   {
     "id": "Sm_01",
-    "denominacion": "UGC Salud Mental Sur??",
+    "denominacion": "UGC Salud Mental Sur",
     "ubicacion": "",
     "codigo_acsa": "",
     "ambito": "",
