@@ -1387,3 +1387,126 @@ mark {
 .dir-btn:hover           { border-color: var(--accent2); color: var(--accent2); background: var(--accent-light); }
 .dir-btn--wa:hover       { border-color: #25d366; color: #25d366; background: #d5f5e3; }
 .dir-btn--mail:hover     { border-color: var(--amber); color: var(--amber); background: var(--amber-light); }
+/* ── Utilidades ─────────────────────────────────────────────── */
+.util-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.util-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: var(--accent2);
+}
+.util-card-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text1);
+}
+.util-card-desc {
+  font-size: 14px;
+  color: var(--text2);
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+.util-form { display: flex; flex-direction: column; gap: 14px; }
+.util-file-wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.util-file-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 6px 14px;
+}
+
+/* ── Campo expandible (modal estándar) ──────────────────────── */
+.campo-expand-wrap {
+  position: relative;
+  margin-bottom: 10px;
+}
+.campo-expandible {
+  width: 100%;
+  resize: none;
+  box-sizing: border-box;
+  padding-right: 32px;   /* espacio para el botón */
+  overflow-y: hidden;
+  transition: rows .15s;
+}
+.campo-expandible:focus {
+  overflow-y: auto;
+}
+.campo-expand-btn {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background .15s, color .15s;
+}
+.campo-expand-btn:hover {
+  background: var(--accent-light);
+  color: var(--accent2);
+  border-color: var(--accent2);
+}
+
+/* ── Filtro de fechas (utilidades) ──────────────────────────── */
+.util-fechas-wrap {
+  background: var(--accent-light);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+}
+.util-fechas-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.util-fecha-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 160px;
+}
+.util-fecha-field span {
+  font-size: 12px;
+  color: var(--text3);
+  white-space: nowrap;
+}
+.util-fecha-field input[type="date"] {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text1);
+}
+.util-formato-badge {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--green);
+  font-weight: 500;
+}

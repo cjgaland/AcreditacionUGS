@@ -24,6 +24,9 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
+  <!-- ── SheetJS (lectura Excel en navegador) ── -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -237,12 +240,13 @@
 
       <div class="sidebar-section" id="nav-utilidades" style="display:none">
         <div class="nav-label">Utilidades</div>
-        <a class="nav-item" onclick="Directorio.seedInicial()" style="cursor:pointer" title="Solo usar una vez">
+        <a class="nav-item" data-view="utilidades" onclick="App.navigate('utilidades')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
-            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
           </svg>
-          Importar directorio
+          Utilidades
         </a>
       </div>
 
@@ -529,6 +533,107 @@
         <div id="directorio-grid"></div>
       </div>
 
+      <!-- ════ VISTA: UTILIDADES (solo admin) ════ -->
+      <div class="view" id="view-utilidades" style="display:none">
+        <div class="view-header">
+          <div>
+            <h2>Utilidades</h2>
+            <span class="view-sub">Herramientas de administración</span>
+          </div>
+        </div>
+
+        <!-- ── Tarjeta: Importar estándares desde Excel ── -->
+        <div class="util-card">
+          <div class="util-card-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            <h3>Importar estándares desde Excel</h3>
+          </div>
+          <p class="util-card-desc">
+            Carga el archivo Excel directamente desde ME_jora C (<em>«Documentos de evidencias y áreas de mejora»</em>)
+            o un archivo ya transformado. La utilidad detecta el formato automáticamente, agrupa por estándar
+            y actualiza <em>Documentos aportados</em>, <em>Evidencias</em> y <em>Área de mejora</em>.
+          </p>
+
+          <div class="util-form">
+            <!-- UGC -->
+            <div class="form-group">
+              <label>UGC destinataria</label>
+              <select id="util-ugc">
+                <option value="">— Selecciona una UGC —</option>
+              </select>
+            </div>
+
+            <!-- Estado -->
+            <div class="form-group">
+              <label>Estado a asignar a los estándares importados</label>
+              <select id="util-estado">
+                <option value="mantener">Mantener el estado actual (no cambiar)</option>
+                <option value="propuesto">Marcar como Propuesto</option>
+                <option value="cumple">Marcar como Cumple</option>
+              </select>
+            </div>
+
+            <!-- Fichero -->
+            <div class="form-group">
+              <label>Archivo Excel (.xlsx)</label>
+              <div class="util-file-wrap">
+                <label class="btn-outline util-file-label" for="util-file">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  Seleccionar archivo
+                </label>
+                <input type="file" id="util-file" accept=".xlsx,.xls,.ods"
+                       style="display:none" onchange="Utilidades.leerExcel(this)">
+                <span id="util-file-info" style="font-size:13px;color:var(--text2);margin-left:10px"></span>
+              </div>
+            </div>
+
+            <!-- Filtro fechas (solo formato ME_jora C original) -->
+            <div class="form-group util-fechas-wrap" id="util-fechas-wrap" style="display:none">
+              <label>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                Filtrar por fecha de subida <span style="font-weight:400;color:var(--text3)">(dejar vacío = todas las fechas)</span>
+              </label>
+              <div class="util-fechas-row">
+                <div class="util-fecha-field">
+                  <span>Desde</span>
+                  <input type="date" id="util-fecha-desde" onchange="Utilidades.aplicarFiltro()">
+                </div>
+                <div class="util-fecha-field">
+                  <span>Hasta</span>
+                  <input type="date" id="util-fecha-hasta" onchange="Utilidades.aplicarFiltro()">
+                </div>
+              </div>
+              <p id="util-formato-badge" class="util-formato-badge"></p>
+            </div>
+          </div>
+
+          <!-- Preview -->
+          <div id="util-preview" style="margin-top:16px"></div>
+
+          <!-- Botón importar -->
+          <div style="margin-top:16px;text-align:right">
+            <button id="util-btn-importar" class="btn-primary" style="display:none"
+                    onclick="Utilidades.importar()">
+              ⬆ Importar a Firestore
+            </button>
+          </div>
+        </div>
+
+      </div>
+
     </main>
   </div>
 </div>
@@ -661,6 +766,7 @@
 <script src="auth.js"></script>
 <script src="app.js"></script>
 <script src="directorio.js"></script>
+<script src="utilidades.js"></script>
 
 </body>
 </html>

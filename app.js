@@ -10,7 +10,7 @@
           logout, abrirWhatsApp,
           iniciarListenerNotificaciones,
           iniciarListenerNotificacionesAdmin,
-          Directorio, confirm */
+          Directorio, Utilidades, normalizarDocs, confirm */
 
 'use strict';
 
@@ -30,6 +30,15 @@ function escHtml(str) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+// Normaliza docs separados por • a uno por línea
+function normalizarDocs(str) {
+  if (!str) return '';
+  if (str.includes('•')) {
+    return str.split('•').map(s => s.trim()).filter(Boolean).join('\n');
+  }
+  return str;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -151,6 +160,7 @@ const App = {
       case 'reuniones':      App.cargarReuniones();     break;
       case 'mis-mensajes':   App.cargarMisMensajes();   break;
       case 'directorio':     Directorio.cargar();       break;
+      case 'utilidades':     Utilidades.cargar();       break;
     }
   },
 
@@ -1166,9 +1176,27 @@ const App = {
               <option value="propuesto" ${d.estado==='propuesto'?'selected':''}>⏳ Propuesto a cumple</option>
             </select>
             <label>Evidencia / descripción</label>
-            <textarea id="modal-est-evidencia" rows="3" placeholder="Describe brevemente la evidencia disponible en MejoraC…">${escHtml(d.evidencia_texto || '')}</textarea>
-            <label>Nombre del documento en MejoraC</label>
-            <input type="text" id="modal-est-documento" placeholder="Ej: PLAN_CALIDAD_2025.pdf" value="${escHtml(d.documento_mejora_c || '')}">
+            <div class="campo-expand-wrap">
+              <textarea class="campo-expandible" id="modal-est-evidencia" rows="2" data-expanded="0"
+                placeholder="Describe brevemente la evidencia disponible en MejoraC…">${escHtml(d.evidencia_texto || '')}</textarea>
+              <button class="campo-expand-btn" type="button"
+                onclick="App._expandirCampo('modal-est-evidencia',this)" title="Expandir">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+            </div>
+            <label>Nombre del documento/s en Mejora C</label>
+            <div class="campo-expand-wrap">
+              <textarea class="campo-expandible" id="modal-est-documento" rows="2" data-expanded="0"
+                placeholder="Un documento por línea: PLAN_CALIDAD_2025.pdf">${escHtml(normalizarDocs(d.documento_mejora_c))}</textarea>
+              <button class="campo-expand-btn" type="button"
+                onclick="App._expandirCampo('modal-est-documento',this)" title="Expandir">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+            </div>
             <label>Área de mejora identificada</label>
             <textarea id="modal-est-mejora" rows="2" placeholder="Describe qué se puede mejorar en relación a este estándar…">${escHtml(d.area_mejora || '')}</textarea>
           </div>
@@ -1878,7 +1906,7 @@ const App = {
             <td>G${s.grupo}</td>
             <td>${s.obligatorio}</td>
             <td class="${s.estado}">${{cumple:'✅ Cumple',propuesto:'⏳ Propuesto',pendiente:'⭕ Pendiente'}[s.estado]||'—'}</td>
-            <td>${st && st.documento_mejora_c ? st.documento_mejora_c : '—'}</td>
+            <td>${st && st.documento_mejora_c ? st.documento_mejora_c.split('\n').map(l => l.trim()).filter(Boolean).join(' • ') : '—'}</td>
           </tr>`;
         }).join('')}
       </tbody>
@@ -2018,6 +2046,25 @@ const App = {
   },
   cerrarModal(id) {
     document.getElementById(id).classList.remove('open');
+  },
+
+  _expandirCampo(fieldId, btn) {
+    const ta = document.getElementById(fieldId);
+    if (!ta) return;
+    const expanded = ta.dataset.expanded === '1';
+    const poly = btn.querySelector('polyline');
+    if (expanded) {
+      ta.rows = 2;
+      ta.dataset.expanded = '0';
+      if (poly) poly.setAttribute('points', '6 9 12 15 18 9');
+      btn.title = 'Expandir';
+    } else {
+      const lines = ta.value.split('\n').length;
+      ta.rows = Math.min(Math.max(lines + 1, 4), 15);
+      ta.dataset.expanded = '1';
+      if (poly) poly.setAttribute('points', '18 15 12 9 6 15');
+      btn.title = 'Contraer';
+    }
   },
 
   /* ══════════════════════════════════════════════════
