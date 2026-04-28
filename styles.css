@@ -311,7 +311,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* User menu */
-.user-menu { position: relative; }
+.user-menu { position: relative; display: flex; align-items: center; gap: 6px; }
 
 .user-avatar {
   width: 36px; height: 36px;
@@ -1250,3 +1250,140 @@ mark {
 /* tabla del dashboard: filas clicables */
 .tabla-acreditacion tbody tr { cursor: pointer; }
 .tabla-acreditacion tbody tr:hover { background: var(--bg2); }
+
+/* ══════════════════════════════════════════════════════════════
+   BADGE DE ROL
+══════════════════════════════════════════════════════════════ */
+.role-badge {
+  display: none;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.role-badge--admin {
+  display: inline-block;
+  background: #d5ede0;
+  color: #2d7a4f;
+  border: 1px solid #b0d9c0;
+}
+.role-badge--ugc {
+  display: inline-block;
+  background: #d6e8f5;
+  color: #1e5b8c;
+  border: 1px solid #a8cde8;
+}
+@media (max-width: 500px) {
+  .role-badge { display: none !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DIRECTORIO DE PERSONAL
+══════════════════════════════════════════════════════════════ */
+.dir-category { margin-bottom: 28px; }
+
+.dir-category-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--text3);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.dir-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px;
+}
+
+.dir-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  transition: box-shadow .2s;
+}
+.dir-card:hover { box-shadow: var(--shadow); }
+
+.dir-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.dir-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.dir-card-info { flex: 1; min-width: 0; }
+
+.dir-nombre {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.dir-cargo {
+  display: block;
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.4;
+}
+
+.dir-notas {
+  display: block;
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 2px;
+}
+
+.dir-btn-edit {
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-size: 15px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  transition: color .2s, background .2s;
+  cursor: pointer;
+}
+.dir-btn-edit:hover { color: var(--accent2); background: var(--accent-light); }
+
+.dir-card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.dir-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 11px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  transition: all .2s;
+  text-decoration: none;
+  cursor: pointer;
+}
+.dir-btn:hover           { border-color: var(--accent2); color: var(--accent2); background: var(--accent-light); }
+.dir-btn--wa:hover       { border-color: #25d366; color: #25d366; background: #d5f5e3; }
+.dir-btn--mail:hover     { border-color: var(--amber); color: var(--amber); background: var(--amber-light); }

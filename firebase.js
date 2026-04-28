@@ -29,8 +29,9 @@ const auth = firebase.auth();
 
 // ── Colecciones principales ──────────────────────────────────────
 const COL = {
-  ugcs:     'ugcs',
-  usuarios: 'usuarios',
+  ugcs:       'ugcs',
+  usuarios:   'usuarios',
+  directorio: 'directorio',
 };
 
 // Sub-colecciones dentro de cada UGC:

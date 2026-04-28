@@ -161,6 +161,7 @@
           <img id="userPhoto" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" style="display:none" onerror="this.style.display='none'">
           <span id="userInitials">?</span>
         </div>
+        <span id="user-role-badge" class="role-badge"></span>
         <div class="user-dropdown" id="userDropdown">
           <div class="user-info">
             <strong id="userName">—</strong>
@@ -218,6 +219,30 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           Mensajes
           <span class="nav-badge" id="nav-badge-mis-mensajes" style="display:none">0</span>
+        </a>
+      </div>
+
+      <div class="sidebar-section" id="nav-directorio">
+        <div class="nav-label">Área</div>
+        <a class="nav-item" data-view="directorio" onclick="App.navigate('directorio')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          Directorio
+        </a>
+      </div>
+
+      <div class="sidebar-section" id="nav-utilidades" style="display:none">
+        <div class="nav-label">Utilidades</div>
+        <a class="nav-item" onclick="Directorio.seedInicial()" style="cursor:pointer" title="Solo usar una vez">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+          </svg>
+          Importar directorio
         </a>
       </div>
 
@@ -473,6 +498,37 @@
         </div>
       </div>
 
+      <!-- ════ VISTA: DIRECTORIO DEL ÁREA ════ -->
+      <div class="view" id="view-directorio" style="display:none">
+        <div class="view-header">
+          <div>
+            <h2>Directorio del Área</h2>
+            <span class="view-sub">Personal del AGS Sur de Córdoba</span>
+          </div>
+          <div class="header-actions">
+            <button class="btn-primary" id="btn-nuevo-contacto" style="display:none" onclick="Directorio.nuevo()">+ Añadir contacto</button>
+          </div>
+        </div>
+        <div class="filter-bar">
+          <div class="search-wrap-m">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="directorio-search" placeholder="Buscar por nombre, cargo o unidad…" oninput="Directorio.filtrar()">
+          </div>
+          <select id="directorio-filtro-tipo" onchange="Directorio.filtrar()">
+            <option value="">Todas las categorías</option>
+            <option value="Dirección">Dirección</option>
+            <option value="Calidad">Calidad</option>
+            <option value="UGC Hospitalaria">UGC Hospitalaria</option>
+            <option value="UGC Interniveles">UGC Interniveles</option>
+            <option value="UGC Intercentros">UGC Intercentros</option>
+            <option value="UGC Primaria">UGC Primaria</option>
+            <option value="DCCU">DCCU</option>
+            <option value="Servicios">Servicios</option>
+          </select>
+        </div>
+        <div id="directorio-grid"></div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -544,6 +600,57 @@
   </div>
 </div>
 
+<!-- Modal: editar / nuevo contacto directorio -->
+<div class="modal-overlay" id="modal-directorio" onclick="App.cerrarModal('modal-directorio')">
+  <div class="modal modal-md" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="App.cerrarModal('modal-directorio')">✕</button>
+    <h3 id="modal-directorio-titulo">Editar contacto</h3>
+    <input type="hidden" id="dir-id">
+    <div class="form-group">
+      <label>Nombre completo</label>
+      <input type="text" id="dir-nombre" placeholder="Nombre y apellidos">
+    </div>
+    <div class="form-group">
+      <label>Cargo / Puesto</label>
+      <input type="text" id="dir-cargo" placeholder="Director UGC, Supervisor, etc.">
+    </div>
+    <div class="form-group">
+      <label>Centro / Unidad</label>
+      <input type="text" id="dir-centro" placeholder="UGC Montilla, AGS Sur de Córdoba…">
+    </div>
+    <div class="form-group">
+      <label>Categoría</label>
+      <select id="dir-tipo">
+        <option value="Dirección">Dirección</option>
+        <option value="Calidad">Calidad</option>
+        <option value="UGC Hospitalaria">UGC Hospitalaria</option>
+        <option value="UGC Interniveles">UGC Interniveles</option>
+        <option value="UGC Intercentros">UGC Intercentros</option>
+        <option value="UGC Primaria">UGC Primaria</option>
+        <option value="DCCU">DCCU</option>
+        <option value="Servicios">Servicios</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Teléfono</label>
+      <input type="tel" id="dir-telefono" placeholder="6XXXXXXXXX">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="dir-email" placeholder="usuario@juntadeandalucia.es">
+    </div>
+    <div class="form-group">
+      <label>Notas</label>
+      <input type="text" id="dir-notas" placeholder="Observaciones opcionales">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-danger" id="btn-dir-eliminar" onclick="Directorio.eliminar(document.getElementById('dir-id').value)" style="margin-right:auto;display:none">🗑 Eliminar</button>
+      <button class="btn-secondary" onclick="App.cerrarModal('modal-directorio')">Cancelar</button>
+      <button class="btn-primary" onclick="Directorio.guardar()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -553,6 +660,7 @@
 <script src="Estandares_ACSA/estandares.js"></script>
 <script src="auth.js"></script>
 <script src="app.js"></script>
+<script src="directorio.js"></script>
 
 </body>
 </html>

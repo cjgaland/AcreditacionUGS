@@ -10,7 +10,7 @@
           logout, abrirWhatsApp,
           iniciarListenerNotificaciones,
           iniciarListenerNotificacionesAdmin,
-          confirm */
+          Directorio, confirm */
 
 'use strict';
 
@@ -52,24 +52,28 @@ const App = {
 
   /* ── Inicialización tras login ──────────────────── */
   async mostrarPanelAdmin(perfil) {
-    document.getElementById('nav-admin').style.display = 'block';
-    document.getElementById('nav-ugc').style.display   = 'none';
-    document.getElementById('userName').textContent    = perfil.nombre;
-    document.getElementById('userEmail').textContent   = perfil.email;
-    document.getElementById('userRol').textContent     = '🔑 Administrador';
+    document.getElementById('nav-admin').style.display      = 'block';
+    document.getElementById('nav-ugc').style.display        = 'none';
+    document.getElementById('nav-utilidades').style.display = 'block';
+    document.getElementById('userName').textContent         = perfil.nombre;
+    document.getElementById('userEmail').textContent        = perfil.email;
+    document.getElementById('userRol').textContent          = '🔑 Administrador';
     App._setUserAvatar(perfil);
+    App._setRolBadge('admin');
     iniciarListenerNotificacionesAdmin();
     await App._sincronizarUGCs();
     App.navigate('dashboard');
   },
 
   async mostrarPanelUGC(perfil) {
-    document.getElementById('nav-ugc').style.display   = 'block';
-    document.getElementById('nav-admin').style.display = 'none';
-    document.getElementById('userName').textContent    = perfil.nombre;
-    document.getElementById('userEmail').textContent   = perfil.email;
-    document.getElementById('userRol').textContent     = `🏥 ${perfil.cargo || 'UGC'}`;
+    document.getElementById('nav-ugc').style.display        = 'block';
+    document.getElementById('nav-admin').style.display      = 'none';
+    document.getElementById('nav-utilidades').style.display = 'none';
+    document.getElementById('userName').textContent         = perfil.nombre;
+    document.getElementById('userEmail').textContent        = perfil.email;
+    document.getElementById('userRol').textContent          = `🏥 ${perfil.cargo || 'UGC'}`;
     App._setUserAvatar(perfil);
+    App._setRolBadge('ugc');
     iniciarListenerNotificaciones(perfil.ugc_id);
     await App._sincronizarUGCs(perfil.ugc_id);
     App.navigate('mi-estado');
@@ -111,6 +115,13 @@ const App = {
     }
   },
 
+  _setRolBadge(rol) {
+    const badge = document.getElementById('user-role-badge');
+    if (!badge) return;
+    badge.textContent = rol === 'admin' ? 'Administrador' : 'Usuario UGC';
+    badge.className   = 'role-badge role-badge--' + rol;
+  },
+
   /* ── Navegación ─────────────────────────────────── */
   navigate(view) {
     // Ocultar todas las vistas
@@ -139,6 +150,7 @@ const App = {
       case 'mis-estandares': App.cargarMisEstandares(); break;
       case 'reuniones':      App.cargarReuniones();     break;
       case 'mis-mensajes':   App.cargarMisMensajes();   break;
+      case 'directorio':     Directorio.cargar();       break;
     }
   },
 
