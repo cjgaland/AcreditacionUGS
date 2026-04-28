@@ -1660,7 +1660,9 @@ const App = {
           <tbody>
             ${snap.docs.map(doc => {
               const d = doc.data();
-              const ugc = d.ugc_id ? UGCS.find(u => u.id === d.ugc_id) : null;
+              const selectUGC = `<select onchange="App.asignarUGC('${doc.id}',this.value)" style="padding:5px 8px;font-size:12px"><option value="">— Sin asignar —</option>${UGCS.map(u=>`<option value="${u.id}" ${d.ugc_id===u.id?'selected':''}>${u.denominacion}</option>`).join('')}</select>`;
+              const textoAdmin = `<span style="font-size:12px;color:var(--text3);font-style:italic">— Administrador —</span>`;
+              const ugcCell = d.rol === 'admin' ? textoAdmin : selectUGC;
               return `
                 <tr>
                   <td><strong>${d.nombre}</strong></td>
@@ -1672,12 +1674,7 @@ const App = {
                       <option value="ugc"       ${d.rol==='ugc'?'selected':''}>🏥 UGC</option>
                     </select>
                   </td>
-                  <td>
-                    <select onchange="App.asignarUGC('${doc.id}',this.value)" style="padding:5px 8px;font-size:12px">
-                      <option value="">— Sin asignar —</option>
-                      ${UGCS.map(u=>`<option value="${u.id}" ${d.ugc_id===u.id?'selected':''}>${u.denominacion}</option>`).join('')}
-                    </select>
-                  </td>
+                  <td>${ugcCell}</td>
                   <td><small style="color:var(--text3)">${d.creado_en ? fmtFecha(d.creado_en) : '—'}</small></td>
                 </tr>`;
             }).join('')}
@@ -1690,8 +1687,11 @@ const App = {
 
   async cambiarRol(uid, rol) {
     try {
-      await db.collection(COL.usuarios).doc(uid).update({ rol });
+      const datos = { rol };
+      if (rol === 'admin') datos.ugc_id = null;   // los admins no pertenecen a ninguna UGC
+      await db.collection(COL.usuarios).doc(uid).update(datos);
       App.showToast('✅ Rol actualizado');
+      App.cargarUsuarios();   // recargar para que la columna UGC refleje el cambio
     } catch(e) { App.showToast('❌ Error: ' + e.message); }
   },
 

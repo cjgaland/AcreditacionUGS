@@ -243,7 +243,20 @@ const Directorio = {
   ══════════════════════════════════════════════════ */
   async seedInicial() {
     if (!isAdmin()) return;
-    if (!confirm('¿Importar todos los contactos del directorio a Firestore?\n\nSolo debe hacerse una vez. Si ya existen contactos se duplicarán.')) return;
+
+    // Guardia anti-duplicado: comprobar si ya hay contactos
+    try {
+      const existing = await db.collection(COL.directorio).limit(1).get();
+      if (!existing.empty) {
+        App.showToast('⚠️ El directorio ya tiene contactos. Elimínalos todos desde Firestore antes de reimportar.');
+        return;
+      }
+    } catch(e) {
+      App.showToast('⚠️ No se pudo verificar el estado del directorio.');
+      return;
+    }
+
+    if (!confirm('¿Importar todos los contactos del directorio a Firestore?\n\nSolo debe hacerse una vez.')) return;
 
     const ts = firebase.firestore.FieldValue.serverTimestamp();
 
