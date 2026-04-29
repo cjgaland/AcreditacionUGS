@@ -1441,11 +1441,8 @@ mark {
   resize: none;
   box-sizing: border-box;
   padding-right: 32px;   /* espacio para el botón */
-  overflow-y: hidden;
-  transition: rows .15s;
-}
-.campo-expandible:focus {
   overflow-y: auto;
+  transition: height .18s ease;
 }
 .campo-expand-btn {
   position: absolute;
@@ -1462,12 +1459,15 @@ mark {
   align-items: center;
   justify-content: center;
   padding: 0;
-  transition: background .15s, color .15s;
+  transition: background .15s, color .15s, border-color .15s;
 }
 .campo-expand-btn:hover {
   background: var(--accent-light);
   color: var(--accent2);
   border-color: var(--accent2);
+}
+.campo-expand-btn svg {
+  transition: transform .18s ease;
 }
 
 /* ── Filtro de fechas (utilidades) ──────────────────────────── */
@@ -1509,4 +1509,99 @@ mark {
   font-size: 12px;
   color: var(--green);
   font-weight: 500;
+}
+
+/* ── Etiqueta con icono de ayuda ⓘ y popover ────────────────── */
+.util-label-con-ayuda {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.util-ayuda {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: var(--accent2);
+  cursor: help;
+  outline: none;
+  transition: color .15s, transform .15s;
+}
+.util-ayuda:hover,
+.util-ayuda:focus {
+  color: var(--accent);
+  transform: scale(1.1);
+}
+.util-ayuda-popover {
+  position: absolute;
+  left: 28px;
+  top: 50%;
+  transform: translateY(-50%) translateX(-6px);
+  min-width: 280px;
+  max-width: 380px;
+  padding: 12px 14px;
+  background: var(--surface);
+  color: var(--text1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.12);
+  font-size: 12.5px;
+  line-height: 1.5;
+  font-weight: 400;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s, transform .15s;
+  z-index: 50;
+}
+.util-ayuda-popover::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+  width: 10px;
+  height: 10px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.util-ayuda:hover .util-ayuda-popover,
+.util-ayuda:focus .util-ayuda-popover {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) translateX(0);
+}
+.util-ayuda-popover strong {
+  color: var(--accent2);
+  font-weight: 600;
+}
+.util-ayuda-popover em {
+  font-style: italic;
+  color: var(--text2);
+}
+
+/* En pantallas estrechas, el popover salta debajo */
+@media (max-width: 720px) {
+  .util-ayuda-popover {
+    left: auto;
+    right: -6px;
+    top: calc(100% + 8px);
+    transform: none;
+    min-width: 240px;
+    max-width: 90vw;
+  }
+  .util-ayuda-popover::before {
+    left: auto;
+    right: 8px;
+    top: -6px;
+    transform: rotate(135deg);
+  }
+  .util-ayuda:hover .util-ayuda-popover,
+  .util-ayuda:focus .util-ayuda-popover {
+    transform: none;
+  }
 }

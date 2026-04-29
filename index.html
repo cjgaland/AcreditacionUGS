@@ -561,7 +561,7 @@
           </p>
 
           <div class="util-form">
-            <!-- UGC -->
+            <!-- 1. UGC -->
             <div class="form-group">
               <label>UGC destinataria</label>
               <select id="util-ugc">
@@ -569,19 +569,56 @@
               </select>
             </div>
 
-            <!-- Estado -->
+            <!-- 2. Filtro de fechas (siempre visible) -->
+            <div class="form-group util-fechas-wrap" id="util-fechas-wrap">
+              <label>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                Rango de fechas a importar <span style="font-weight:400;color:var(--text3)">(filtra los registros del Excel por fecha de subida en Mejora C)</span>
+              </label>
+              <div class="util-fechas-row">
+                <div class="util-fecha-field">
+                  <span>Desde</span>
+                  <input type="date" id="util-fecha-desde" onchange="Utilidades.aplicarFiltro()">
+                </div>
+                <div class="util-fecha-field">
+                  <span>Hasta</span>
+                  <input type="date" id="util-fecha-hasta" onchange="Utilidades.aplicarFiltro()">
+                </div>
+              </div>
+              <p id="util-formato-badge" class="util-formato-badge"></p>
+            </div>
+
+            <!-- 3. Estado -->
             <div class="form-group">
               <label>Estado a asignar a los estándares importados</label>
               <select id="util-estado">
+                <option value="cumple" selected>✅ Marcar como Cumple (autoevaluación)</option>
+                <option value="propuesto">⏳ Marcar como Propuesto a cumple</option>
                 <option value="mantener">Mantener el estado actual (no cambiar)</option>
-                <option value="propuesto">Marcar como Propuesto</option>
-                <option value="cumple">Marcar como Cumple</option>
               </select>
             </div>
 
-            <!-- Fichero -->
+            <!-- 4. Fichero con tooltip de ayuda -->
             <div class="form-group">
-              <label>Archivo Excel (.xlsx)</label>
+              <label class="util-label-con-ayuda">
+                Archivo Excel (.xlsx)
+                <span class="util-ayuda" tabindex="0" role="button" aria-label="Cómo obtener el archivo">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                  </svg>
+                  <span class="util-ayuda-popover" role="tooltip">
+                    Por favor, obtén el fichero Excel descargado del área
+                    <strong>Proyectos &rsaquo; [Código del Proyecto] &rsaquo; Autoevaluación &rsaquo;
+                    Informes y listados &rsaquo; Documentos de evidencias y áreas de mejora</strong>
+                    de la <em>Plataforma Web Mejora C</em> de la ACSA.
+                  </span>
+                </span>
+              </label>
               <div class="util-file-wrap">
                 <label class="btn-outline util-file-label" for="util-file">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -595,28 +632,6 @@
                        style="display:none" onchange="Utilidades.leerExcel(this)">
                 <span id="util-file-info" style="font-size:13px;color:var(--text2);margin-left:10px"></span>
               </div>
-            </div>
-
-            <!-- Filtro fechas (solo formato ME_jora C original) -->
-            <div class="form-group util-fechas-wrap" id="util-fechas-wrap" style="display:none">
-              <label>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px">
-                  <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                Filtrar por fecha de subida <span style="font-weight:400;color:var(--text3)">(dejar vacío = todas las fechas)</span>
-              </label>
-              <div class="util-fechas-row">
-                <div class="util-fecha-field">
-                  <span>Desde</span>
-                  <input type="date" id="util-fecha-desde" onchange="Utilidades.aplicarFiltro()">
-                </div>
-                <div class="util-fecha-field">
-                  <span>Hasta</span>
-                  <input type="date" id="util-fecha-hasta" onchange="Utilidades.aplicarFiltro()">
-                </div>
-              </div>
-              <p id="util-formato-badge" class="util-formato-badge"></p>
             </div>
           </div>
 

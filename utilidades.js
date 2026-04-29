@@ -28,6 +28,14 @@ const Utilidades = (() => {
     if (!sel) return;
     sel.innerHTML = '<option value="">— Selecciona una UGC —</option>' +
       UGCS.map(u => `<option value="${u.id}">${u.denominacion}</option>`).join('');
+
+    // Prefijar fecha "Hasta" al día de hoy (modificable por el usuario)
+    const hoy = new Date();
+    const yyyy = hoy.getFullYear();
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dd = String(hoy.getDate()).padStart(2, '0');
+    const hastaInp = document.getElementById('util-fecha-hasta');
+    if (hastaInp) hastaInp.value = `${yyyy}-${mm}-${dd}`;
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -51,13 +59,14 @@ const Utilidades = (() => {
     const info = document.getElementById('util-file-info');
     if (info) info.textContent = '';
 
-    const fechasWrap = document.getElementById('util-fechas-wrap');
-    if (fechasWrap) fechasWrap.style.display = 'none';
-
+    // El bloque de fechas permanece SIEMPRE visible (lo gestiona cargar())
     const fDesde = document.getElementById('util-fecha-desde');
     const fHasta = document.getElementById('util-fecha-hasta');
     if (fDesde) fDesde.value = '';
     if (fHasta) fHasta.value = '';
+
+    const badge = document.getElementById('util-formato-badge');
+    if (badge) badge.textContent = '';
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -102,10 +111,6 @@ const Utilidades = (() => {
     _esRaw = _detectarFormatoRaw(claves);
 
     if (_esRaw) {
-      // Mostrar filtro de fechas
-      const fw = document.getElementById('util-fechas-wrap');
-      if (fw) fw.style.display = 'block';
-
       const badge = document.getElementById('util-formato-badge');
       if (badge) {
         badge.textContent = '✅ Formato ME_jora C original detectado · ' + rows.length + ' registros totales';
@@ -302,8 +307,8 @@ const Utilidades = (() => {
 
     const tbody = _filas.map(r => {
       const codHtml  = _escHtml(r.codigo);
-      const docHtml  = r.documento
-        ? r.documento.split('\n').map(l => `<div style="white-space:nowrap;font-size:11px">• ${_escHtml(l.trim())}</div>`).join('')
+      const docHtml  = r.documento ? 
+        r.documento.split('\n').map(l => `<div style="white-space:nowrap;font-size:11px">• ${_escHtml(l.trim())}</div>`).join('')
         : '<span style="color:var(--text3)">—</span>';
       const evCorto  = r.evidencia.length > 80 ? r.evidencia.substring(0, 80) + '…' : r.evidencia;
       const evHtml   = evCorto ? _escHtml(evCorto) : '<span style="color:var(--text3)">—</span>';

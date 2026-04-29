@@ -1177,9 +1177,9 @@ const App = {
             </select>
             <label>Evidencia / descripción</label>
             <div class="campo-expand-wrap">
-              <textarea class="campo-expandible" id="modal-est-evidencia" rows="2" data-expanded="0"
+              <textarea class="campo-expandible" id="modal-est-evidencia" rows="4" data-expanded="0"
                 placeholder="Describe brevemente la evidencia disponible en MejoraC…">${escHtml(d.evidencia_texto || '')}</textarea>
-              <button class="campo-expand-btn" type="button"
+              <button class="campo-expand-btn" type="button" aria-label="Expandir"
                 onclick="App._expandirCampo('modal-est-evidencia',this)" title="Expandir">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                   <polyline points="6 9 12 15 18 9"/>
@@ -1188,9 +1188,9 @@ const App = {
             </div>
             <label>Nombre del documento/s en Mejora C</label>
             <div class="campo-expand-wrap">
-              <textarea class="campo-expandible" id="modal-est-documento" rows="2" data-expanded="0"
+              <textarea class="campo-expandible" id="modal-est-documento" rows="4" data-expanded="0"
                 placeholder="Un documento por línea: PLAN_CALIDAD_2025.pdf">${escHtml(normalizarDocs(d.documento_mejora_c))}</textarea>
-              <button class="campo-expand-btn" type="button"
+              <button class="campo-expand-btn" type="button" aria-label="Expandir"
                 onclick="App._expandirCampo('modal-est-documento',this)" title="Expandir">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                   <polyline points="6 9 12 15 18 9"/>
@@ -1198,7 +1198,16 @@ const App = {
               </button>
             </div>
             <label>Área de mejora identificada</label>
-            <textarea id="modal-est-mejora" rows="2" placeholder="Describe qué se puede mejorar en relación a este estándar…">${escHtml(d.area_mejora || '')}</textarea>
+            <div class="campo-expand-wrap">
+              <textarea class="campo-expandible" id="modal-est-mejora" rows="4" data-expanded="0"
+                placeholder="Describe qué se puede mejorar en relación a este estándar…">${escHtml(d.area_mejora || '')}</textarea>
+              <button class="campo-expand-btn" type="button" aria-label="Expandir"
+                onclick="App._expandirCampo('modal-est-mejora',this)" title="Expandir">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+            </div>
           </div>
 
           ${d.validado_en ? `<div style="font-size:11px;color:var(--green);margin-bottom:14px">✅ Validado el ${fmtFecha(d.validado_en)}</div>` : ''}
@@ -2053,17 +2062,24 @@ const App = {
     if (!ta) return;
     const expanded = ta.dataset.expanded === '1';
     const poly = btn.querySelector('polyline');
+
     if (expanded) {
-      ta.rows = 2;
+      // Contraer → vuelve a la altura compacta (4 filas), elimina alto fijo
+      ta.style.height = '';
+      ta.rows = 4;
       ta.dataset.expanded = '0';
       if (poly) poly.setAttribute('points', '6 9 12 15 18 9');
       btn.title = 'Expandir';
+      btn.setAttribute('aria-label', 'Expandir');
     } else {
-      const lines = ta.value.split('\n').length;
-      ta.rows = Math.min(Math.max(lines + 1, 4), 15);
+      // Expandir → medir scrollHeight real (funciona también con texto sin saltos de línea)
+      ta.style.height = 'auto';
+      const alto = Math.min(Math.max(ta.scrollHeight, 96), 480); // límites: 96px–480px
+      ta.style.height = alto + 'px';
       ta.dataset.expanded = '1';
       if (poly) poly.setAttribute('points', '18 15 12 9 6 15');
       btn.title = 'Contraer';
+      btn.setAttribute('aria-label', 'Contraer');
     }
   },
 
