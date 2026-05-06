@@ -2622,7 +2622,11 @@ const App = {
       `<div class="guia-panel${i===0?' active':''}" id="guia-panel-${t.id}">${panels[t.id]||''}</div>`
     ).join('');
 
-    cont.innerHTML = `<div class="guia-wrapper">${tabBar}${panelsHtml}</div>`;
+    const icoDown = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+    const btnAdmin = admin ? `<button class="guia-btn-pdf guia-btn-pdf-admin" onclick="App.descargarManualAdmin()">${icoDown} Guía de Administrador (PDF)</button>` : '';
+    const descarga = `<div class="guia-descarga-btns"><button class="guia-btn-pdf" onclick="App.descargarManualUsuario()">${icoDown} Guía de Usuario (PDF)</button>${btnAdmin}</div>`;
+
+    cont.innerHTML = `<div class="guia-wrapper">${descarga}${tabBar}${panelsHtml}</div>`;
   },
 
   _guiaTab(id) {
@@ -2632,6 +2636,678 @@ const App = {
     document.querySelectorAll('.guia-panel').forEach(p => {
       p.classList.toggle('active', p.id === 'guia-panel-' + id);
     });
+  },
+
+  descargarManualUsuario() {
+    App._mostrarInformeEnApp('Guía de Usuario · Plataforma Mentoría ACSA', App._htmlManual(false));
+  },
+
+  descargarManualAdmin() {
+    App._mostrarInformeEnApp('Guía de Administrador · Plataforma Mentoría ACSA', App._htmlManual(true));
+  },
+
+  _htmlManual(esAdmin) {
+    const fecha = new Date().toLocaleDateString('es-ES', {day:'2-digit', month:'long', year:'numeric'});
+    const rolLabel = esAdmin ? 'Manual del Administrador' : 'Manual del Usuario UGC';
+
+    /* ── helpers internos ──────────────────────────────────────── */
+    const ico = (path, sz) => `<svg width="${sz||24}" height="${sz||24}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${path}</svg>`;
+
+    let _sn = 0;
+    const secc = (icoPath, tit, sub, body) => {
+      _sn++;
+      const num = _sn < 10 ? '0' + _sn : String(_sn);
+      return `<div class="sec sec-break">
+        <div class="sec-hdr">
+          <div class="sec-ico">${ico(icoPath, 26)}</div>
+          <div class="sec-hdr-txt"><div class="sec-tit">${tit}</div><div class="sec-sub">${sub}</div></div>
+          <div class="sec-num">${num}</div>
+        </div>
+        <div class="sec-body">${body}</div>
+      </div>`;
+    };
+
+    const blk = (tit, body) => `<div class="blk"><h3 class="blk-tit">${tit}</h3>${body}</div>`;
+
+    const steps = (...items) => `<div class="steps">${items.map((t,i) =>
+      `<div class="step"><div class="step-n">${i+1}</div><div class="step-t">${t}</div></div>`
+    ).join('')}</div>`;
+
+    const lista = (...items) => `<ul class="gl">${items.map(i => `<li>${i}</li>`).join('')}</ul>`;
+
+    const tbl = (heads, rows) => `<table class="gt"><thead><tr>${heads.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+
+    const tip  = t => `<div class="tip">💡 <strong>Consejo:</strong> ${t}</div>`;
+    const warn = t => `<div class="warn">⚠️ <strong>Importante:</strong> ${t}</div>`;
+    const nota = t => `<div class="nota">📌 ${t}</div>`;
+
+    /* ── CSS ───────────────────────────────────────────────────── */
+    const css = `
+      @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+      @page { margin: 2.2cm 2.8cm; }
+      *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+      body { font-family:'DM Sans',Arial,sans-serif; color:#1a2332; background:#fff; font-size:11pt; line-height:1.65; }
+      h1,h2,h3,h4 { font-weight:700; }
+      strong { color:#1e3a5f; }
+      em { font-style:italic; }
+      code { font-family:monospace; font-size:9.5pt; background:#f0f4f8; padding:1px 5px; border-radius:4px; color:#1e5b8c; }
+
+      /* ── PORTADA ── */
+      .cover {
+        min-height:100vh; width:100%;
+        background:linear-gradient(140deg,#1e3a5f 0%,#1a5490 55%,#1e8aab 100%);
+        color:#fff; display:flex; flex-direction:column;
+        align-items:center; justify-content:center;
+        padding:70px 80px 50px; page-break-after:always; text-align:center;
+      }
+      .cover-emblem {
+        width:88px; height:88px;
+        background:rgba(255,255,255,.18); border:2px solid rgba(255,255,255,.35);
+        border-radius:22px; display:flex; align-items:center; justify-content:center;
+        margin-bottom:28px;
+      }
+      .cover-area { font-size:11pt; opacity:.75; margin-bottom:10px; letter-spacing:.04em; }
+      .cover-title { font-size:28pt; font-weight:700; line-height:1.2; margin-bottom:6px; }
+      .cover-divider { width:60px; height:3px; background:rgba(255,255,255,.5); border-radius:2px; margin:22px auto; }
+      .cover-badge {
+        display:inline-block; background:rgba(255,255,255,.2);
+        border:1.5px solid rgba(255,255,255,.45);
+        border-radius:30px; padding:9px 28px;
+        font-size:13pt; font-weight:600; margin-bottom:18px;
+      }
+      .cover-desc { font-size:11pt; opacity:.78; max-width:520px; line-height:1.7; margin-bottom:40px; }
+      .cover-icons-grid {
+        display:grid; grid-template-columns:repeat(4,1fr);
+        gap:18px; width:100%; max-width:580px; margin-bottom:50px;
+      }
+      .cig { display:flex; flex-direction:column; align-items:center; gap:9px; }
+      .cig-box {
+        width:62px; height:62px;
+        background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.28);
+        border-radius:14px; display:flex; align-items:center; justify-content:center;
+      }
+      .cig-lbl { font-size:8.5pt; opacity:.78; text-align:center; line-height:1.3; }
+      .cover-foot { font-size:9pt; opacity:.55; margin-top:auto; }
+      .cover-foot span { display:block; margin-top:4px; }
+
+      /* ── ÍNDICE ── */
+      .toc { page-break-before:always; padding-bottom:30px; }
+      .toc-title { font-size:20pt; color:#1e3a5f; margin-bottom:28px; padding-bottom:12px; border-bottom:3px solid #1e5b8c; }
+      .toc-item { display:flex; align-items:baseline; padding:7px 0; border-bottom:1px dotted #d0dce8; }
+      .toc-n { font-weight:700; color:#1e5b8c; width:32px; flex-shrink:0; font-size:11pt; }
+      .toc-l { flex:1; font-size:11pt; color:#1a2332; }
+      .toc-s { padding:4px 0 4px 32px; border-bottom:1px dotted #e8f0f8; }
+      .toc-s .toc-l { font-size:10pt; color:#5a6a7a; }
+
+      /* ── SECCIONES ── */
+      .sec { margin-bottom:36px; }
+      .sec-break { page-break-before:always; }
+      .sec-hdr {
+        background:linear-gradient(135deg,#1e3a5f 0%,#1e5b8c 100%);
+        color:#fff; border-radius:10px; padding:18px 22px;
+        margin-bottom:22px; display:flex; align-items:center; gap:16px;
+      }
+      .sec-ico {
+        width:50px; height:50px; min-width:50px;
+        background:rgba(255,255,255,.18); border-radius:12px;
+        display:flex; align-items:center; justify-content:center;
+      }
+      .sec-hdr-txt { flex:1; }
+      .sec-tit { font-size:15pt; font-weight:700; line-height:1.2; }
+      .sec-sub { font-size:9.5pt; opacity:.78; margin-top:3px; }
+      .sec-num { font-size:32pt; font-weight:700; opacity:.25; line-height:1; }
+      .sec-body { padding:0 2px; }
+
+      /* ── BLOQUES ── */
+      .blk { margin-bottom:20px; }
+      .blk-tit {
+        font-size:12pt; color:#1e3a5f; font-weight:700;
+        padding:8px 14px; margin-bottom:12px;
+        border-left:4px solid #1e5b8c;
+        background:#f0f6fb; border-radius:0 6px 6px 0;
+      }
+      .blk p { font-size:11pt; color:#2a3a4a; line-height:1.7; margin-bottom:10px; }
+
+      /* ── PASOS ── */
+      .steps { display:flex; flex-direction:column; gap:10px; margin:10px 0 14px; }
+      .step { display:flex; gap:13px; align-items:flex-start; }
+      .step-n {
+        width:26px; height:26px; min-width:26px;
+        background:#1e5b8c; color:#fff; border-radius:50%;
+        font-size:10pt; font-weight:700;
+        display:flex; align-items:center; justify-content:center;
+      }
+      .step-t { font-size:11pt; color:#2a3a4a; line-height:1.65; padding-top:3px; }
+
+      /* ── LISTAS ── */
+      .gl { list-style:none; padding:0; margin:10px 0 14px; display:flex; flex-direction:column; gap:6px; }
+      .gl li { padding:6px 0 6px 22px; position:relative; font-size:11pt; color:#2a3a4a; line-height:1.6; border-bottom:1px solid #f0f4f8; }
+      .gl li::before { content:'›'; position:absolute; left:5px; color:#1e5b8c; font-weight:700; font-size:14pt; line-height:1; }
+
+      /* ── TABLAS ── */
+      .gt { width:100%; border-collapse:collapse; margin:12px 0 16px; font-size:10.5pt; }
+      .gt th { background:#1e3a5f; color:#fff; padding:10px 13px; text-align:left; font-weight:600; }
+      .gt td { padding:9px 13px; border-bottom:1px solid #e0e8f0; color:#2a3a4a; vertical-align:top; }
+      .gt tr:nth-child(even) td { background:#f5f8fb; }
+      .gt .bnd { display:inline-block; padding:3px 10px; border-radius:12px; font-size:9pt; font-weight:700; }
+      .bnd-a { background:#fde0e0; color:#b03030; }
+      .bnd-u { background:#d5ede0; color:#2d7a4f; }
+      .bnd-p { background:#fdefd3; color:#b06000; }
+
+      /* ── CAJAS ── */
+      .tip  { background:#d6e8f5; border-left:4px solid #1e5b8c; border-radius:8px; padding:11px 15px; margin:14px 0; font-size:10.5pt; color:#1e3a5f; line-height:1.6; }
+      .warn { background:#fdefd3; border-left:4px solid #b06000; border-radius:8px; padding:11px 15px; margin:14px 0; font-size:10.5pt; color:#6b3800; line-height:1.6; }
+      .nota { background:#f0f4f8; border-left:4px solid #5a6a7a; border-radius:8px; padding:11px 15px; margin:14px 0; font-size:10.5pt; color:#2a3a4a; line-height:1.6; }
+
+      /* ── INTRO SUB-PORTADA ── */
+      .intro-hero {
+        background:linear-gradient(135deg,#1e3a5f 0%,#1e5b8c 100%);
+        color:#fff; border-radius:10px; padding:26px 28px; margin-bottom:24px;
+      }
+      .intro-hero h2 { font-size:16pt; margin-bottom:8px; }
+      .intro-hero p { font-size:11pt; opacity:.85; line-height:1.7; }
+
+      /* ── PRINT ── */
+      @media print {
+        .cover { min-height:100vh; }
+        .sec-break { page-break-before:always; }
+      }
+    `;
+
+    /* ── PORTADA ───────────────────────────────────────────────── */
+    const coverDesc = esAdmin
+      ? 'Administración completa del proceso de acreditación ACSA: seguimiento de las 60 UGCs, validación de estándares, mensajería, gestión de usuarios e importación de datos desde ME_jora C.'
+      : 'Seguimiento del proceso de acreditación ACSA de tu Unidad de Gestión Clínica: registro de evidencias, comunicación con el equipo de Calidad y consulta del progreso.';
+
+    const cigData = [
+      { path: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>', lbl: 'Cuadro de Mandos' },
+      { path: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>', lbl: 'Directorio UGCs' },
+      { path: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>', lbl: 'Estándares ACSA' },
+      { path: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>', lbl: 'Reuniones' },
+      { path: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>', lbl: 'Mensajes' },
+      { path: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>', lbl: 'Usuarios' },
+      { path: '<rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8.5" cy="11" r="2.5"/><path d="M14 9h4M14 13h4M5 17c0-1.66 1.57-3 3.5-3s3.5 1.34 3.5 3"/>', lbl: 'Directorio Área' },
+      { path: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>', lbl: 'Buscador' },
+    ];
+
+    const cover = `
+      <div class="cover">
+        <div class="cover-emblem">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <rect x="20" y="6" width="8" height="36" rx="3" fill="white"/>
+            <rect x="6" y="20" width="36" height="8" rx="3" fill="white"/>
+          </svg>
+        </div>
+        <div class="cover-area">Área de Gestión Sanitaria Sur de Córdoba · Área de Calidad y Seguridad del Paciente</div>
+        <h1 class="cover-title">Plataforma de Mentoría ACSA</h1>
+        <div class="cover-divider"></div>
+        <div class="cover-badge">${rolLabel}</div>
+        <p class="cover-desc">${coverDesc}</p>
+        <div class="cover-icons-grid">
+          ${cigData.map(c => `<div class="cig"><div class="cig-box">${ico(c.path, 30)}</div><div class="cig-lbl">${c.lbl}</div></div>`).join('')}
+        </div>
+        <div class="cover-foot">
+          Plataforma Mentoría ACSA &mdash; AGS Sur de Córdoba
+          <span>Generado el ${fecha}</span>
+        </div>
+      </div>`;
+
+    /* ── ÍNDICE ────────────────────────────────────────────────── */
+    const tocItems = [
+      ['1', 'Introducción y Acceso a la Plataforma'],
+      ['2', 'Interfaz y Navegación'],
+      ['3', 'Mi Estado · Progreso de Acreditación'],
+      ['4', 'Mis Estándares · Registro de Evidencias'],
+      ['5', 'Reuniones y Tareas de Mentoría'],
+      ['6', 'Mensajes · Comunicación con el Equipo de Calidad'],
+      ['7', 'Directorio del Área'],
+      ['8', 'Herramientas Complementarias'],
+    ];
+    const tocAdmin = [
+      ['A', 'Cuadro de Mandos'],
+      ['B', 'Directorio de UGCs y Ficha UGC'],
+      ['C', 'Validación de Estándares'],
+      ['D', 'Gestión de Mensajes (Administrador)'],
+      ['E', 'Gestión de Usuarios y Roles'],
+      ['F', 'Utilidades: Importación y Migración de Datos'],
+    ];
+    const allToc = esAdmin ? [...tocItems, ...tocAdmin] : tocItems;
+    const toc = `
+      <div class="toc">
+        <h2 class="toc-title">Índice de Contenidos</h2>
+        ${allToc.map(([n,l]) => `<div class="toc-item"><div class="toc-n">${n}</div><div class="toc-l">${l}</div></div>`).join('')}
+      </div>`;
+
+    /* ── SECCIONES COMUNES (usuario + admin) ──────────────────── */
+    const ICO = {
+      login:    '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+      nav:      '<line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>',
+      estado:   '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+      estand:   '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+      reunion:  '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+      mensaje:  '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+      direct:   '<rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8.5" cy="11" r="2.5"/><path d="M14 9h4M14 13h4M5 17c0-1.66 1.57-3 3.5-3s3.5 1.34 3.5 3"/>',
+      tools:    '<circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M2 12h2M20 12h2"/>',
+      dash:     '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
+      ugcs:     '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+      check:    '<polyline points="20 6 9 17 4 12"/>',
+      usuarios: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+      util:     '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+    };
+
+    const s1 = secc(ICO.login, 'Introducción y Acceso', 'Registro, inicio de sesión y recuperación de contraseña', `
+      ${blk('¿Qué es la Plataforma de Mentoría ACSA?', `<p>La Plataforma de Mentoría ACSA es una herramienta web desarrollada para el <strong>Área de Gestión Sanitaria Sur de Córdoba</strong> que facilita el seguimiento del proceso de acreditación ACSA de las Unidades de Gestión Clínica (UGC). Permite registrar evidencias de estándares, coordinar reuniones de mentoría y mantener comunicación directa entre las UGCs y el equipo de Calidad.</p>`)}
+      ${blk('Requisitos de acceso', `
+        ${lista(
+          'Disponer de un correo corporativo <strong>@juntadeandalucia.es</strong> — es el único dominio permitido.',
+          'Acceso a internet desde cualquier navegador moderno (Chrome, Firefox, Edge, Safari).',
+          'La plataforma es compatible con dispositivos móviles y tabletas.'
+        )}
+        ${warn('No es posible registrarse ni iniciar sesión con cuentas de correo personales (Gmail, Outlook, etc.).')}
+      `)}
+      ${blk('Crear una cuenta nueva', `
+        ${steps(
+          'Accede a la plataforma y haz clic en <strong>¿Primera vez? Crear una cuenta</strong>.',
+          'Introduce tu nombre completo, correo corporativo (@juntadeandalucia.es) y elige una contraseña de al menos 6 caracteres.',
+          'Pulsa <strong>Crear cuenta</strong>. Verás una pantalla de espera indicando que tu solicitud está siendo revisada.',
+          'Un administrador asignará tu rol y tu UGC. Recibirás acceso en cuanto lo haga.'
+        )}
+        ${nota('Puedes usar el icono del ojo junto al campo de contraseña para mostrar u ocultar los caracteres mientras escribes.')}
+      `)}
+      ${blk('Iniciar sesión', `
+        ${steps(
+          'Introduce tu correo corporativo y contraseña.',
+          'Pulsa <strong>Entrar</strong> o presiona la tecla <kbd>Intro</kbd>.',
+          'Si tus credenciales son correctas accederás directamente a tu panel.'
+        )}
+      `)}
+      ${blk('Recuperar la contraseña', `
+        ${steps(
+          'En la pantalla de login, haz clic en <strong>¿Olvidaste tu contraseña? Recuperarla</strong>.',
+          'Introduce tu correo corporativo y pulsa <strong>Enviar enlace de recuperación</strong>.',
+          'Revisa tu bandeja de entrada (incluyendo la carpeta de spam).',
+          'Haz clic en el enlace del correo de Firebase para establecer una nueva contraseña.'
+        )}
+      `)}
+    `);
+
+    const s2 = secc(ICO.nav, 'Interfaz y Navegación', 'Encabezado, barra lateral y elementos de la interfaz', `
+      ${blk('Encabezado de la aplicación', `
+        ${lista(
+          '<strong>Botón de menú (☰):</strong> abre y cierra la barra lateral de navegación. En móvil es el único modo de acceder al menú.',
+          '<strong>Icono de luna / sol:</strong> alterna entre el tema oscuro y el tema claro. La preferencia se guarda y se aplica automáticamente en la siguiente visita.',
+          '<strong>Icono de campana:</strong> muestra el número de mensajes no leídos. Al pulsarlo accedes directamente al panel de mensajes.',
+          '<strong>Avatar (iniciales del usuario):</strong> despliega el menú de cuenta con tu nombre, correo, rol, acceso al Buscador de Estándares y el botón de cerrar sesión.'
+        )}
+      `)}
+      ${blk('Barra lateral de navegación', `
+        ${lista(
+          'Está organizada por secciones según tu rol (Administración / Mi Unidad / Área / Herramientas).',
+          'La sección activa aparece resaltada en azul.',
+          'En móvil puedes cerrarla tocando fuera del menú o el mismo botón ☰.'
+        )}
+      `)}
+      ${blk('Modo oscuro', `
+        <p>Haz clic en el icono de <strong>luna</strong> (tema claro) o <strong>sol</strong> (tema oscuro) en la esquina superior derecha. El cambio es inmediato y se recuerda entre sesiones.</p>
+        ${tip('El modo oscuro reduce la fatiga visual en entornos con poca luz y es especialmente útil en dispositivos móviles.')}
+      `)}
+    `);
+
+    const s3 = secc(ICO.estado, 'Mi Estado · Progreso de Acreditación', 'Resumen de avance y niveles de certificación', `
+      ${blk('¿Qué muestra esta pantalla?', `
+        <p>La pantalla <strong>Mi Estado</strong> ofrece una visión global del progreso de tu UGC en el proceso de acreditación ACSA. Incluye el porcentaje de estándares superados por grupo, el nivel de certificación alcanzado y, si ya estás certificado/a, las fechas del ciclo activo.</p>
+      `)}
+      ${blk('Grupos de estándares', `
+        ${tbl(['Grupo', 'Descripción', 'Nº estándares'],
+          [
+            ['G0 Obligatorios', 'Estándares imprescindibles para cualquier nivel de certificación.', '31'],
+            ['Grupo I (GI)', 'Estándares adicionales para niveles Avanzado y superiores.', '19'],
+            ['Grupo II (GII)', 'Estándares para nivel Óptimo y Excelente.', '18'],
+            ['Grupo III (GIII)', 'Estándares para nivel Excelente.', '8'],
+          ]
+        )}
+        ${nota('Total: 76 estándares en el Manual ACSA para UGC.')}
+      `)}
+      ${blk('Niveles de certificación', `
+        ${tbl(['Nivel', 'Requisitos para alcanzarlo'],
+          [
+            ['En proceso', 'Aún no se han completado los requisitos del nivel Avanzado.'],
+            ['Avanzado', '100% de los estándares obligatorios (G0) + ≥ 70% del Grupo I.'],
+            ['Óptimo', '100% Grupo I + ≥ 40% del Grupo II.'],
+            ['Excelente', '100% Grupo I + 100% Grupo II + ≥ 40% del Grupo III.'],
+          ]
+        )}
+        ${tip('El Buscador de Estándares te muestra qué estándares han superado ya otras UGCs del área, lo que puede servirte de referencia y ejemplo.')}
+      `)}
+    `);
+
+    const s4 = secc(ICO.estand, 'Mis Estándares · Registro de Evidencias', 'Cómo completar, proponer y gestionar estándares', `
+      ${blk('¿Qué es un estándar ACSA?', `
+        <p>Cada estándar define un criterio de calidad que tu UGC debe demostrar que cumple mediante una <strong>evidencia</strong>: descripción de cómo lo implementáis en la práctica y, opcionalmente, el nombre del documento de mejora correspondiente en ME_jora C.</p>
+      `)}
+      ${blk('Estados posibles de un estándar', `
+        ${tbl(['Estado', 'Significado', 'Quién puede cambiarlo'],
+          [
+            ['⬜ Pendiente', 'Aún no se ha aportado evidencia.', 'UGC o Administrador'],
+            ['🟣 Propuesto', 'La UGC ha aportado evidencia y solicita validación.', 'UGC (a Propuesto) · Admin (a Cumple o Pendiente)'],
+            ['✅ Cumple', 'Validado por el equipo de Calidad del Área.', 'Solo Administrador'],
+          ]
+        )}
+        ${warn('Una vez que un estándar está en estado <strong>Propuesto</strong>, no puedes modificarlo. Si necesitas hacer cambios, comunícalo al equipo de Calidad a través de Mensajes.')}
+      `)}
+      ${blk('Cómo registrar una evidencia paso a paso', `
+        ${steps(
+          'Accede a <strong>Mis Estándares</strong> desde el menú lateral.',
+          'Usa los filtros (Grupo, Estado, Obligatoriedad, Texto libre) para localizar el estándar que deseas trabajar.',
+          'Haz clic sobre el estándar para abrirlo en un panel de detalle.',
+          'En el campo <strong>Descripción de la evidencia</strong>, redacta cómo habéis implantado este criterio en vuestra unidad. Sé específico/a y concreto/a.',
+          'En el campo <strong>Documento de mejora en ME_jora C</strong>, anota el nombre exacto del documento subido a la plataforma ME_jora C.',
+          'Cuando la evidencia esté lista, cambia el estado a <strong>Propuesto a cumple</strong>.',
+          'Haz clic en <strong>Guardar</strong>. El equipo de Calidad recibirá la propuesta para su revisión.'
+        )}
+        ${tip('Puedes guardar la descripción en estado Pendiente y continuar editándola en visitas posteriores, antes de cambiar a Propuesto.')}
+      `)}
+      ${blk('Filtros disponibles', `
+        ${lista(
+          '<strong>Grupo:</strong> filtra por G0, GI, GII o GIII para centrarte en los estándares que necesitas alcanzar para el siguiente nivel.',
+          '<strong>Estado:</strong> Pendiente / Propuesto / Cumple. Muy útil para ver solo los que aún requieren tu atención.',
+          '<strong>Solo obligatorios:</strong> muestra únicamente los 31 estándares imprescindibles.',
+          '<strong>Criterio y Bloque:</strong> filtrado por criterios ACSA específicos.',
+          '<strong>Búsqueda por texto:</strong> escribe el código del estándar (ej: <code>OC1.1</code>) o palabras clave para localizarlo rápidamente.'
+        )}
+      `)}
+    `);
+
+    const s5 = secc(ICO.reunion, 'Reuniones y Tareas de Mentoría', 'Consulta de reuniones, acuerdos y seguimiento de tareas', `
+      ${blk('¿Qué son las reuniones de mentoría?', `
+        <p>El equipo de Calidad del Área realiza reuniones periódicas con cada UGC para revisar el avance del proceso de acreditación. Cada reunión queda registrada en la plataforma con su fecha, tipo, participantes, acuerdos alcanzados y tareas asignadas.</p>
+      `)}
+      ${blk('Tipos de reunión', `
+        ${tbl(['Tipo', 'Descripción'],
+          [
+            ['Reunión inicial', 'Primera reunión de presentación del proceso de acreditación y planificación.'],
+            ['Seguimiento', 'Revisión periódica del avance de los estándares y resolución de dudas.'],
+            ['Evaluación final', 'Revisión del cumplimiento de todos los estándares antes de la evaluación ACSA.'],
+          ]
+        )}
+      `)}
+      ${blk('Gestionar tus tareas', `
+        ${steps(
+          'Accede a <strong>Reuniones</strong> desde el menú lateral.',
+          'Selecciona la reunión que deseas consultar para ver el detalle completo.',
+          'En la sección <strong>Tareas asignadas</strong> verás las tareas con su descripción, responsable y plazo.',
+          'Cuando hayas completado una tarea, marca el checkbox a su izquierda. El cambio se guarda automáticamente.'
+        )}
+        ${tip('Las reuniones son creadas y editadas por el equipo de Calidad. Si detectas algún error en los datos de una reunión, comunícalo a través de Mensajes.')}
+      `)}
+    `);
+
+    const s6 = secc(ICO.mensaje, 'Mensajes · Comunicación con el Equipo de Calidad', 'Envío, recepción y gestión de mensajes', `
+      ${blk('Panel de mensajes', `
+        <p>El sistema de mensajería de la plataforma permite la comunicación formal entre tu UGC y el equipo de Calidad del Área. Los mensajes quedan registrados y son accesibles desde ambas partes en cualquier momento.</p>
+        ${lista(
+          'La pestaña <strong>Activos</strong> muestra los hilos con mensajes recientes o no leídos.',
+          'La pestaña <strong>Historial</strong> guarda las conversaciones ya leídas para consultas futuras.',
+          'Un <strong>punto rojo</strong> en el icono de campana del encabezado indica mensajes sin leer.'
+        )}
+      `)}
+      ${blk('Enviar un mensaje nuevo', `
+        ${steps(
+          'Ve a <strong>Mis Mensajes</strong> en el menú lateral.',
+          'Haz clic en <strong>Nuevo mensaje</strong>.',
+          'Selecciona el tipo de consulta y redacta tu mensaje.',
+          'Pulsa <strong>Enviar</strong>. El equipo de Calidad lo recibirá en su panel.'
+        )}
+      `)}
+      ${blk('Recibir y leer respuestas', `
+        ${steps(
+          'Cuando el equipo de Calidad responda, aparecerá un indicador en el icono de campana.',
+          'Accede a <strong>Mis Mensajes → Activos</strong> para ver la respuesta.',
+          'Haz clic en el hilo del mensaje para leer la conversación completa.',
+          'El mensaje pasará automáticamente a la pestaña Historial tras ser leído.'
+        )}
+      `)}
+      ${blk('Contacto por WhatsApp', `
+        <p>En la pantalla de Mis Mensajes encontrarás botones de acceso rápido al WhatsApp del equipo de Calidad. Úsalos para consultas urgentes o coordinación rápida.</p>
+        ${nota('Para el seguimiento formal del proceso de acreditación, utiliza preferentemente el sistema de mensajes de la plataforma, ya que queda registrado.')}
+      `)}
+    `);
+
+    const s7 = secc(ICO.direct, 'Directorio del Área', 'Contactos del personal del AGS Sur de Córdoba', `
+      ${blk('¿Qué contiene el directorio?', `
+        <p>El <strong>Directorio del Área</strong> recoge los datos de contacto del personal del Área de Gestión Sanitaria Sur de Córdoba: nombre, cargo, unidad, teléfono y correo electrónico.</p>
+      `)}
+      ${blk('Cómo buscar un contacto', `
+        ${lista(
+          '<strong>Buscador:</strong> escribe el nombre, cargo o unidad del contacto que necesitas.',
+          '<strong>Filtro por categoría:</strong> selecciona el tipo de personal (directivo, técnico, UGC, etc.).',
+          '<strong>Botones de contacto directo:</strong> algunos contactos incluyen botones para llamar o enviar un correo directamente desde la plataforma.'
+        )}
+      `)}
+    `);
+
+    const s8 = secc(ICO.tools, 'Herramientas Complementarias', 'Buscador de estándares, ME_jora C y configuración', `
+      ${blk('Buscador de Estándares ACSA', `
+        <p>Herramienta independiente que muestra los <strong>76 estándares del Manual ACSA para UGC</strong> con toda su información: criterio, grupo, obligatoriedad, circuito y descripción completa.</p>
+        ${lista(
+          'Filtra por Bloque, Criterio, Grupo de certificación, Obligatoriedad y Circuito.',
+          'Consulta qué UGCs del área han superado ya cada estándar y qué evidencias presentaron — <strong>excelente referencia</strong> para redactar las tuyas.',
+          'Genera un PDF o PNG del estándar para compartirlo.',
+          'El botón <em>← Mentoría</em> te devuelve a tu panel sin pasar por el login.'
+        )}
+        ${tip('Accede al Buscador desde el menú lateral o desde el menú de usuario (avatar). También está disponible sin login en la página de inicio de la plataforma.')}
+      `)}
+      ${blk('Portal ME_jora C', `
+        <p>Desde el menú lateral puedes acceder directamente al <strong>portal externo de ME_jora C</strong> de la ACSA, donde se gestionan los documentos de mejora y el expediente de acreditación.</p>
+        ${nota('ME_jora C es una plataforma externa de la ACSA, independiente de esta plataforma de mentoría. Las credenciales de acceso son distintas.')}
+      `)}
+      ${blk('Configuración personal', `
+        ${lista(
+          '<strong>Cambiar contraseña:</strong> usa la opción de recuperación de contraseña en la pantalla de login.',
+          '<strong>Tema oscuro / claro:</strong> icono de luna/sol en el encabezado.',
+          '<strong>Cerrar sesión:</strong> menú de usuario (avatar) → Cerrar sesión.'
+        )}
+      `)}
+    `);
+
+    const seccionesUsuario = s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8;
+
+    /* ── SECCIONES ADMIN ──────────────────────────────────────── */
+    const seccionesAdmin = esAdmin ? (
+      secc(ICO.dash, 'Cuadro de Mandos', 'Visión global del proceso de acreditación de todas las UGCs', `
+        ${blk('¿Qué muestra el cuadro de mandos?', `
+          <p>El <strong>Cuadro de Mandos</strong> es la pantalla principal del administrador. Ofrece una visión global del estado de acreditación de las 60 UGCs del Área de Gestión Sanitaria Sur de Córdoba en tiempo real.</p>
+          ${lista(
+            'Tarjetas con el nombre y fase actual de cada UGC. El color del borde indica la fase activa (solicitud, autoevaluación, evaluación, establecimiento, seguimiento, recertificación).',
+            'Contador de estándares en estado <strong>Propuesto</strong> pendientes de validación en todo el área.',
+            'Lista de los estándares propuestos más recientes: haz clic en cualquiera para abrirlo y validarlo directamente.'
+          )}
+        `)}
+        ${blk('Acceso rápido a fichas UGC', `
+          <p>Desde el cuadro de mandos puedes acceder a la ficha de cualquier UGC haciendo clic en su tarjeta. Esto te llevará directamente a la pestaña de <strong>Progreso</strong> de esa UGC.</p>
+          ${tip('Usa el buscador y los filtros del Directorio de UGCs cuando necesites localizar una UGC específica por nombre, fase o ámbito.')}
+        `)}
+      `) +
+      secc(ICO.ugcs, 'Directorio de UGCs y Ficha UGC', 'Gestión completa del seguimiento por unidad', `
+        ${blk('Directorio de UGCs', `
+          <p>Lista completa de las 60 UGCs del área con su fase actual de acreditación, ámbito (Atención Primaria / Hospital) y nombre completo. Dispone de buscador y filtros por fase y ámbito.</p>
+        `)}
+        ${blk('Ficha UGC · Pestaña Progreso', `
+          ${lista(
+            'Porcentaje de estándares cumplidos desglosado por grupo (G0, GI, GII, GIII).',
+            'Nivel de certificación actual y requisitos para el siguiente nivel.',
+            'Botón <strong>Generar informe PDF</strong>: crea un informe completo de la UGC con todos sus datos, estándares, reuniones y mensajes.'
+          )}
+        `)}
+        ${blk('Ficha UGC · Pestaña Estándares', `
+          ${lista(
+            'Lista completa de los 76 estándares con el estado actual en esta UGC.',
+            'Los estándares en estado <strong>Propuesto</strong> aparecen resaltados en morado — son los que requieren tu revisión.',
+            'Haz clic en cualquier estándar para abrirlo, leer la evidencia y validarla o devolverla a Pendiente.',
+            'Los filtros son idénticos a los del panel de usuario.'
+          )}
+        `)}
+        ${blk('Ficha UGC · Pestaña Reuniones', `
+          ${steps(
+            'Haz clic en <strong>Nueva reunión</strong> para registrar una reunión de mentoría.',
+            'Completa la fecha, tipo, participantes y acuerdos alcanzados.',
+            'Añade las tareas asignadas: descripción, responsable y plazo.',
+            'Guarda la reunión. Quedará visible para el responsable de la UGC.'
+          )}
+        `)}
+        ${blk('Ficha UGC · Pestaña Información', `
+          <p>Recoge todos los datos del ciclo de acreditación de la UGC: tipo de proyecto, director clínico, responsable del proyecto, 11 fechas clave del ciclo (solicitud, autoevaluación desde/hasta, respuesta al solicitante desde/hasta, seguimiento, apercibimiento desde/hasta, fin de certificación), ubicaciones del centro y histórico de certificaciones.</p>
+          ${steps(
+            'Haz clic en <strong>Editar</strong> para modificar los datos.',
+            'Completa o actualiza los campos necesarios.',
+            'Pulsa <strong>Guardar cambios</strong>.'
+          )}
+          ${tip('Al importar desde ME_jora C (Utilidades → Importar Proyecto), estos campos se completan automáticamente con los datos del PDF.')}
+        `)}
+      `) +
+      secc(ICO.check, 'Validación de Estándares', 'Proceso de revisión y validación de evidencias propuestas', `
+        ${blk('Flujo de validación', `
+          ${steps(
+            'La UGC registra su evidencia y cambia el estado del estándar a <strong>Propuesto a cumple</strong>.',
+            'El estándar aparece resaltado en morado en la ficha UGC y en el Cuadro de Mandos.',
+            'El administrador accede a la ficha UGC → pestaña Estándares → hace clic en el estándar propuesto.',
+            'Lee la descripción de la evidencia y el nombre del documento en ME_jora C.',
+            'Si la evidencia es correcta: cambia el estado a <strong>Cumple</strong> y guarda.',
+            'Si la evidencia es insuficiente: cambia el estado a <strong>Pendiente</strong>, añade un comentario explicando qué falta y guarda.',
+            'La UGC podrá ver el cambio de estado y el comentario en su panel de estándares.'
+          )}
+        `)}
+        ${blk('Criterios de validación recomendados', `
+          ${lista(
+            'La evidencia describe <strong>cómo</strong> se implementa el criterio en la práctica clínica, no solo que se hace.',
+            'El documento en ME_jora C existe y está accesible en la plataforma ACSA.',
+            'La evidencia es específica de la UGC, no una descripción genérica.',
+            'Si aplica un protocolo de área, la UGC debe demostrar que lo ha adaptado o adoptado en su unidad.'
+          )}
+          ${tip('Puedes usar el Buscador de Estándares para ver las evidencias validadas de otras UGCs como referencia de calidad.')}
+        `)}
+      `) +
+      secc(ICO.mensaje, 'Gestión de Mensajes (Administrador)', 'Panel centralizado de comunicaciones con todas las UGCs', `
+        ${blk('Panel centralizado de mensajes', `
+          <p>El panel de mensajes del administrador agrupa todas las comunicaciones de las 60 UGCs. Los mensajes se organizan en <strong>hilos</strong> (mensaje original + todas las respuestas).</p>
+          ${lista(
+            'Pestaña <strong>Activos:</strong> hilos con mensajes no leídos, ordenados por fecha (más recientes primero).',
+            'Pestaña <strong>Historial:</strong> hilos ya leídos para consultas futuras.',
+            'El número en el icono de campana indica el total de mensajes no leídos en toda la plataforma.'
+          )}
+        `)}
+        ${blk('Responder a una UGC', `
+          ${steps(
+            'Ve a <strong>Mensajes</strong> en el menú lateral.',
+            'Selecciona el hilo de la UGC que deseas responder.',
+            'Lee el mensaje original y el historial de la conversación.',
+            'Escribe tu respuesta en el campo de texto y pulsa <strong>Enviar</strong>.',
+            'La UGC recibirá la respuesta en su panel de Mis Mensajes y verá el indicador de mensaje no leído.'
+          )}
+          ${tip('También puedes iniciar una conversación con una UGC desde la pestaña Mensajes dentro de su Ficha UGC.')}
+        `)}
+        ${blk('Eliminar un hilo de mensajes', `
+          <p>Para eliminar un hilo completo (mensaje original + todas sus respuestas), haz clic en el icono 🗑️ junto al hilo en la lista. Esta acción es definitiva y no tiene marcha atrás.</p>
+          ${warn('Solo el administrador puede eliminar hilos de mensajes. Una vez eliminados no pueden recuperarse.')}
+        `)}
+      `) +
+      secc(ICO.usuarios, 'Gestión de Usuarios y Roles', 'Administración de accesos y asignación de UGCs', `
+        ${blk('Roles disponibles', `
+          ${tbl(['Rol', 'Acceso a la plataforma'],
+            [
+              ['<span class="bnd bnd-a">Admin</span>', 'Acceso completo: cuadro de mandos, todas las UGCs, validar estándares, mensajes de todas las UGCs, gestión de usuarios y utilidades.'],
+              ['<span class="bnd bnd-u">UGC</span>', 'Solo su propia UGC: Mi Estado, Mis Estándares, Reuniones, Mis Mensajes y Directorio.'],
+              ['<span class="bnd bnd-p">Pendiente</span>', 'Pantalla de espera. No puede acceder a la aplicación hasta que el administrador le asigne un rol.'],
+            ]
+          )}
+        `)}
+        ${blk('Gestionar usuarios', `
+          ${steps(
+            'Ve a <strong>Usuarios</strong> en el menú lateral.',
+            'Verás la lista de todos los usuarios registrados con su nombre, correo, rol actual y UGC asignada.',
+            'Para cambiar el rol: haz clic en el selector junto al usuario y elige el nuevo rol.',
+            'Si asignas rol <strong>UGC</strong>, aparece un selector con la lista de las 60 UGCs para asignarle la suya.',
+            'Si asignas rol <strong>Admin</strong>, la UGC asignada se borra automáticamente.',
+            'Los cambios se guardan automáticamente en cuanto seleccionas el nuevo valor.'
+          )}
+          ${warn('Al cambiar el rol de un usuario a Admin, asegúrate de que es una persona de confianza con responsabilidades de gestión del proceso de acreditación.')}
+        `)}
+        ${blk('Primer administrador', `
+          <p>El primer administrador no puede ser creado desde la propia plataforma (ya que necesita que un admin lo active). Para configurar el primer admin:</p>
+          ${steps(
+            'Crea la cuenta desde la pantalla de login con el correo corporativo.',
+            'Accede a la <strong>consola de Firebase</strong> (console.firebase.google.com).',
+            'Ve a <strong>Firestore Database → /usuarios/{uid}</strong> donde uid es el identificador del usuario recién creado.',
+            'Edita el campo <code>rol</code> y cambia su valor de <em>pendiente</em> a <em>admin</em>.',
+            'A partir de ese momento el usuario tendrá acceso completo de administrador.'
+          )}
+        `)}
+      `) +
+      secc(ICO.util, 'Utilidades: Importación y Migración de Datos', 'Herramientas exclusivas para administradores', `
+        ${blk('Importar Ficha de Proyecto desde PDF (ME_jora C)', `
+          <p>Permite importar automáticamente los datos del ciclo de acreditación de una UGC directamente desde el PDF de la <strong>Ficha de Proyecto</strong> descargado de ME_jora C.</p>
+          ${steps(
+            'Ve a <strong>Utilidades</strong> en el menú lateral (solo visible para administradores).',
+            'En el panel derecho <em>Importar PDF de Ficha de Proyecto</em>, arrastra el archivo PDF o haz clic para seleccionarlo.',
+            'La plataforma extrae automáticamente: tipo de proyecto, director clínico, responsable del proyecto, las 11 fechas del ciclo, las ubicaciones del centro y los datos de certificación.',
+            'Si existen varias grafías de una misma ubicación (ej: "C.S. Castro del Río" y "Centro de Salud de Castro"), aparecerán agrupadas con botones de selección para elegir la canónica.',
+            'Selecciona la UGC de destino en el selector desplegable.',
+            'Pulsa <strong>Importar Proyecto</strong>. Los datos se combinarán con los existentes (operación merge: nada se borra).'
+          )}
+          ${tip('Descarga la Ficha de Proyecto desde ME_jora C en formato PDF imprimible. La plataforma reconoce el formato estándar de la ACSA.')}
+        `)}
+        ${blk('Importar evidencias desde Excel (ME_jora C)', `
+          <p>Permite actualizar masivamente los campos de evidencia de los estándares de una UGC usando el archivo Excel de seguimiento descargado de ME_jora C.</p>
+          ${steps(
+            'En el panel izquierdo <em>Importar estándares desde Excel</em>, arrastra el archivo .xlsx o haz clic para seleccionarlo.',
+            'Si necesitas filtrar por fechas, ajusta el rango Desde / Hasta (el campo Desde es opcional).',
+            'Revisa la tabla de vista previa con los estándares que se importarán.',
+            'Pulsa <strong>Importar evidencias</strong>. Los campos de evidencia y documento se actualizarán en Firestore.'
+          )}
+          ${warn('La importación sobreescribe los campos de evidencia existentes. Revisa la vista previa antes de confirmar.')}
+        `)}
+        ${blk('Migrar datos entre UGCs', `
+          <p>Copia todos los estándares, reuniones y mensajes de un ID de UGC a otro. Útil cuando se corrige un identificador erróneo o se reestructura el directorio.</p>
+          ${steps(
+            'Introduce el ID de UGC <strong>origen</strong> (el que tiene los datos).',
+            'Introduce el ID de UGC <strong>destino</strong> (el nuevo identificador).',
+            'Pulsa <strong>Migrar</strong>. Los datos se copian al destino.'
+          )}
+          ${nota('Esta operación no elimina los datos del origen. Verifica que la migración fue correcta antes de eliminar la UGC antigua.')}
+        `)}
+      `)
+    ) : '';
+
+    /* ── DOCUMENTO FINAL ──────────────────────────────────────── */
+    const intro = esAdmin ? `
+      <div class="intro-hero sec-break">
+        <h2>Secciones de Usuario</h2>
+        <p>Las secciones 1 a 8 describen las funcionalidades disponibles para todos los usuarios con rol UGC. Como administrador tienes acceso a todas estas funciones además de las secciones específicas de administración.</p>
+      </div>` : '';
+
+    const introAdmin = esAdmin ? `
+      <div class="intro-hero sec-break">
+        <h2>Secciones de Administración</h2>
+        <p>Las secciones A a F describen las funcionalidades exclusivas del rol de administrador: gestión global de UGCs, validación de estándares, comunicaciones centralizadas, gestión de usuarios e importación de datos.</p>
+      </div>` : '';
+
+    return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${rolLabel} · Plataforma Mentoría ACSA</title>
+  <style>${css}</style>
+</head>
+<body>
+  ${cover}
+  ${toc}
+  ${intro}
+  ${seccionesUsuario}
+  ${introAdmin}
+  ${seccionesAdmin}
+</body>
+</html>`;
   },
 
   _mostrarInformeEnApp(titulo, html) {

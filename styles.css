@@ -1990,6 +1990,12 @@ mark {
 .gbadge-pend   { background: #fdefd3; color: #b06000; }
 
 /* Botón descargar manual */
+.guia-descarga-btns {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
 .guia-btn-pdf {
   display: inline-flex;
   align-items: center;
@@ -1998,11 +2004,12 @@ mark {
   color: #fff;
   border: none;
   border-radius: var(--radius-sm);
-  padding: 10px 20px;
+  padding: 11px 22px;
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
-  margin-top: 4px;
-  transition: opacity .2s;
+  transition: opacity .2s, transform .15s;
+  box-shadow: 0 2px 8px rgba(30,91,140,.3);
 }
-.guia-btn-pdf:hover { opacity: .88; }
+.guia-btn-pdf:hover { opacity: .88; transform: translateY(-1px); }
+.guia-btn-pdf-admin { background: var(--accent); }
