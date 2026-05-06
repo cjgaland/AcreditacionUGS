@@ -81,10 +81,21 @@ async function logout() {
 //   OBSERVER
 // ═════════════════════════════════════════════════════════════════
 
+// Detecta si venimos del Buscador de Estándares para evitar el flash de login
+const _desdeBuscador = new URLSearchParams(window.location.search).get('desde') === 'buscador';
+if (_desdeBuscador) {
+  // Ocultar pantalla de login mientras Firebase verifica la sesión
+  const sl = document.getElementById('screen-login');
+  if (sl) sl.style.visibility = 'hidden';
+}
+
 auth.onAuthStateChanged(async user => {
   if (!user) {
     if (_unsubPerfilListener) { _unsubPerfilListener(); _unsubPerfilListener = null; }
-    currentUser = null; currentPerfil = null; mostrarPantallaLogin(); return;
+    currentUser = null; currentPerfil = null;
+    const sl = document.getElementById('screen-login');
+    if (sl) sl.style.visibility = '';
+    mostrarPantallaLogin(); return;
   }
 
   if (!user.email.endsWith(DOMINIO_PERMITIDO)) {
@@ -116,6 +127,8 @@ auth.onAuthStateChanged(async user => {
       currentPerfil = nuevoPerfil;
     }
 
+    const sl2 = document.getElementById('screen-login');
+    if (sl2) sl2.style.visibility = '';
     ocultarPantallaLogin();
     gestionarRol(currentPerfil);
 

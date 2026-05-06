@@ -134,11 +134,11 @@ aside {
 /* "Todos" stays on its own line */
 .chip-all { align-self: flex-start; }
 
-/* All other chips wrap in a row */
+/* Each filter option on its own line */
 .chip-rest {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .chip {
@@ -146,13 +146,21 @@ aside {
   border-radius: 999px;
   border: 1.5px solid var(--border);
   background: var(--bg);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
   cursor: pointer;
   transition: all .18s;
   user-select: none;
-  white-space: nowrap;
-  line-height: 1.4;
+  white-space: normal;
+  line-height: 1.35;
+  display: inline-block;
+  align-self: flex-start;
+}
+
+/* "Todos" chip keeps its wider pill style */
+.chip-all .chip {
+  font-size: 12px;
+  padding: 5px 16px;
 }
 
 .chip:hover { border-color: var(--accent); color: var(--accent); }
