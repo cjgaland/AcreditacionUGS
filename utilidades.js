@@ -24,10 +24,24 @@ const Utilidades = (() => {
   // ──────────────────────────────────────────────────────────────
   function cargar() {
     _resetImportador();
+
+    // Selector importador
     const sel = document.getElementById('util-ugc');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">— Selecciona una UGC —</option>' +
-      UGCS.map(u => `<option value="${u.id}">${u.denominacion}</option>`).join('');
+    if (sel) {
+      sel.innerHTML = '<option value="">— Selecciona una UGC —</option>' +
+        UGCS.map(u => `<option value="${u.id}">${u.denominacion}</option>`).join('');
+    }
+
+    // Selector destino migración
+    const selDest = document.getElementById('mig-destino');
+    if (selDest) {
+      selDest.innerHTML = '<option value="">— Selecciona UGC destino —</option>' +
+        UGCS.map(u => `<option value="${u.id}">${u.id} · ${u.denominacion}</option>`).join('');
+    }
+
+    // Mostrar log de migración
+    const log = document.getElementById('mig-log');
+    if (log) log.style.display = 'block';
 
     // Prefijar fecha "Hasta" al día de hoy (modificable por el usuario)
     const hoy = new Date();
@@ -414,7 +428,79 @@ const Utilidades = (() => {
     }
   }
 
+  // ──────────────────────────────────────────────────────────────
+  // migrarUGC()  —  copia subcol. estandares/reuniones/mensajes
+  //                 de una UGC origen a una UGC destino
+  // ──────────────────────────────────────────────────────────────
+  async function migrarUGC() {
+    const origenId  = document.getElementById('mig-origen').value;
+    const destinoId = document.getElementById('mig-destino').value;
+
+    if (!origenId)  { App.showToast('Selecciona la UGC de origen');  return; }
+    if (!destinoId) { App.showToast('Selecciona la UGC de destino'); return; }
+    if (origenId === destinoId) { App.showToast('Origen y destino no pueden ser iguales'); return; }
+
+    const btn = document.getElementById('mig-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Migrando…'; }
+
+    const log = document.getElementById('mig-log');
+    if (log) log.innerHTML = '';
+
+    function addLog(msg) {
+      if (!log) return;
+      const p = document.createElement('p');
+      p.style.cssText = 'margin:2px 0;font-size:12px;font-family:monospace';
+      p.textContent = msg;
+      log.appendChild(p);
+    }
+
+    try {
+      const COLECCIONES = ['estandares', 'reuniones', 'mensajes'];
+      let totalDocs = 0;
+
+      for (const colNombre of COLECCIONES) {
+        const snap = await db.collection(COL.ugcs).doc(origenId)
+                             .collection(colNombre).get();
+        if (snap.empty) { addLog('  · ' + colNombre + ': vacía, omitida'); continue; }
+
+        const BATCH_MAX = 400;
+        let batch = db.batch();
+        let ops   = 0;
+        let count = 0;
+
+        for (const docSnap of snap.docs) {
+          const ref = db.collection(COL.ugcs).doc(destinoId)
+                        .collection(colNombre).doc(docSnap.id);
+          batch.set(ref, docSnap.data(), { merge: true });
+          ops++;
+          count++;
+          totalDocs++;
+
+          if (ops >= BATCH_MAX) {
+            await batch.commit();
+            batch = db.batch();
+            ops   = 0;
+          }
+        }
+
+        if (ops > 0) await batch.commit();
+        addLog('  ✅ ' + colNombre + ': ' + count + ' documentos copiados');
+      }
+
+      addLog('');
+      addLog('✅ Migración completada — ' + totalDocs + ' documentos en total');
+      addLog('⚠️  Los datos del origen (' + origenId + ') NO han sido eliminados.');
+      App.showToast('✅ Migración completada: ' + totalDocs + ' documentos');
+
+    } catch (err) {
+      addLog('❌ Error: ' + err.message);
+      App.showToast('❌ Error en la migración: ' + err.message);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '🔄 Ejecutar migración'; }
+    }
+  }
+
   // ── API pública ───────────────────────────────────────────────
-  return { cargar, leerExcel, aplicarFiltro, importar };
+  return { cargar, leerExcel, aplicarFiltro, importar, migrarUGC };
 
 })();

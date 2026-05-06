@@ -71,7 +71,15 @@ const App = {
     App._setRolBadge('admin');
     iniciarListenerNotificacionesAdmin();
     await App._sincronizarUGCs();
-    App.navigate('dashboard');
+    const _dp = new URLSearchParams(window.location.search);
+    const _deepUgc = _dp.get('ugc');
+    const _deepStd = _dp.get('std');
+    if (_deepUgc && _deepStd && UGCS.find(u => u.id === _deepUgc)) {
+      await App.abrirFichaUGC(_deepUgc);
+      await App.abrirModalEstandar(_deepStd, _deepUgc);
+    } else {
+      App.navigate('dashboard');
+    }
   },
 
   async mostrarPanelUGC(perfil) {
@@ -85,7 +93,15 @@ const App = {
     App._setRolBadge('ugc');
     iniciarListenerNotificaciones(perfil.ugc_id);
     await App._sincronizarUGCs(perfil.ugc_id);
-    App.navigate('mi-estado');
+    const _dp2 = new URLSearchParams(window.location.search);
+    const _deepUgc2 = _dp2.get('ugc');
+    const _deepStd2 = _dp2.get('std');
+    if (_deepStd2 && _deepUgc2 === perfil.ugc_id) {
+      App.navigate('mis-estandares');
+      await App.abrirModalEstandar(_deepStd2, perfil.ugc_id);
+    } else {
+      App.navigate('mi-estado');
+    }
   },
 
   async _sincronizarUGCs(ugcId) {
@@ -161,6 +177,7 @@ const App = {
       case 'mis-mensajes':   App.cargarMisMensajes();   break;
       case 'directorio':     Directorio.cargar();       break;
       case 'utilidades':     Utilidades.cargar();       break;
+      case 'guia':           App.cargarGuia();          break;
     }
   },
 
@@ -2027,6 +2044,115 @@ const App = {
   /* ══════════════════════════════════════════════════
      OVERLAY INFORME (PWA-safe)
   ══════════════════════════════════════════════════ */
+  // ══════════════════════════════════════════════════
+  //   GUÍA DE USO
+  // ══════════════════════════════════════════════════
+  cargarGuia() {
+    const admin = isAdmin();
+    const sub   = document.getElementById('guia-subtitulo');
+    const cont  = document.getElementById('guia-contenido');
+    if (!cont) return;
+    if (sub) sub.textContent = admin ? 'Manual del Administrador' : 'Manual del Usuario UGC';
+
+    const seccion = (titulo, icono, items) => `
+      <div class="guia-seccion">
+        <div class="guia-seccion-titulo">${icono} ${titulo}</div>
+        <ul class="guia-lista">${items.map(i => `<li>${i}</li>`).join('')}</ul>
+      </div>`;
+
+    const htmlAdmin = `
+      <div class="guia-intro">
+        <p>Bienvenido/a al panel de <strong>Administrador</strong> de la Plataforma de Mentoría ACSA.
+        Desde aquí puedes gestionar todo el proceso de acreditación de las 26 UGCs del Área de Gestión Sanitaria Sur de Córdoba.</p>
+      </div>
+      ${seccion('Cuadro de Mandos', '📊', [
+        'Muestra el resumen global de todas las UGCs: cuántas están en cada fase y cuántos estándares están propuestos pendientes de validación.',
+        'Haz clic en cualquier tarjeta de UGC del dashboard para abrir su ficha completa.',
+        'Los estándares <em>Propuestos</em> aparecen en la lista inferior; haz clic para revisarlos y validarlos o devolverlos.'
+      ])}
+      ${seccion('Directorio de UGCs', '🏥', [
+        'Lista las 26 UGCs del área con su fase actual de acreditación.',
+        'Usa el buscador y los filtros (fase, ámbito) para localizar rápidamente una UGC.',
+        'Haz clic en una tarjeta para abrir la <strong>Ficha UGC</strong> con 5 pestañas: Progreso, Estándares, Reuniones, Mensajes e Información.'
+      ])}
+      ${seccion('Ficha UGC → Estándares', '✅', [
+        'Visualiza los 76 estándares del manual ACSA con su estado actual (Pendiente / Propuesto / Cumple).',
+        'Haz clic en cualquier estándar para abrirlo: puedes cambiar su estado, leer la evidencia aportada y validarlo como <em>Cumple</em> o devolverlo a <em>Pendiente</em>.',
+        'Usa los filtros por grupo, obligatoriedad, criterio y estado para centrarte en lo que necesitas revisar.'
+      ])}
+      ${seccion('Ficha UGC → Reuniones', '📅', [
+        'Crea registros de reuniones de mentoría con fecha, tipo, participantes, acuerdos y tareas asignadas.',
+        'Las tareas pueden marcarse como completadas desde la misma ficha.',
+        'El botón <em>Informe PDF</em> genera un informe completo de la UGC descargable/imprimible.'
+      ])}
+      ${seccion('Mensajes', '💬', [
+        'Panel centralizado de todos los mensajes recibidos de las UGCs.',
+        'Puedes responder directamente desde la plataforma; la UGC recibirá la respuesta en su panel de mensajes.',
+        'El icono de campana en el encabezado muestra el número de mensajes no leídos.'
+      ])}
+      ${seccion('Gestión de Usuarios', '👥', [
+        'Lista todos los usuarios registrados con su rol y UGC asignada.',
+        'Cambia el rol de un usuario entre <em>Pendiente</em>, <em>Usuario UGC</em> y <em>Administrador</em>.',
+        'Asigna la UGC correspondiente a cada usuario de rol <em>ugc</em>.'
+      ])}
+      ${seccion('Directorio del Área', '📋', [
+        'Directorio de contacto del personal del AGS Sur de Córdoba.',
+        'Como administrador puedes añadir, editar y eliminar contactos.',
+        'Los usuarios UGC pueden consultar el directorio pero no modificarlo.'
+      ])}
+      ${seccion('Utilidades (solo admin)', '🛠️', [
+        '<strong>Importar estándares desde Excel:</strong> Sube el archivo de evidencias descargado de ME_jora C. La utilidad detecta el formato automáticamente, filtra por fechas si es necesario y actualiza masivamente los campos de evidencia y documentos en Firestore.',
+        '<strong>Migrar datos entre UGCs:</strong> Copia todos los estándares, reuniones y mensajes de un ID de UGC antiguo a uno nuevo. Útil al reestructurar el directorio de UGCs.'
+      ])}
+      ${seccion('Buscador de Estándares', '🔍', [
+        'Herramienta independiente que muestra los 76 estándares del Manual ACSA para UGC.',
+        'Filtra por Bloque, Criterio, Grupo de certificación, Obligatoriedad y Circuito.',
+        'Consulta las UGCs que ya han cumplido cada estándar y accede directamente a su evidencia.',
+        'El botón <em>← Mentoría</em> te devuelve al Cuadro de Mandos sin pasar por la pantalla de inicio.'
+      ])}`;
+
+    const htmlUGC = `
+      <div class="guia-intro">
+        <p>Bienvenido/a a la Plataforma de Mentoría ACSA. Esta herramienta te ayuda a llevar el seguimiento del proceso de acreditación de tu Unidad de Gestión Clínica y a mantener comunicación con el equipo de Calidad del Área.</p>
+      </div>
+      ${seccion('Mi Estado', '📊', [
+        'Muestra el resumen de progreso de tu UGC: porcentaje de estándares cumplidos por grupo y nivel de certificación alcanzado.',
+        'Los niveles son: <em>En Proceso → Avanzado → Óptimo → Excelente</em>, según los umbrales del manual ACSA.',
+        'Consulta aquí tu fase actual de acreditación y las fechas clave si ya estás certificado/a.'
+      ])}
+      ${seccion('Mis Estándares', '✅', [
+        'Lista los 76 estándares del Manual ACSA con su estado actual en tu UGC.',
+        'Haz clic en cualquier estándar para abrirlo y completar la información: descripción de la evidencia, nombre del documento en ME_jora C y área de mejora.',
+        'Cuando una evidencia esté lista, cambia el estado a <em>Propuesto a cumple</em> para que el equipo de Calidad la valide.',
+        'Usa los filtros para localizar rápidamente los estándares pendientes u obligatorios.'
+      ])}
+      ${seccion('Reuniones', '📅', [
+        'Consulta el registro de reuniones de mentoría con el equipo de Calidad.',
+        'Verás los acuerdos alcanzados y las tareas asignadas a tu UGC.',
+        'Puedes marcar tus tareas como completadas directamente desde esta pantalla.'
+      ])}
+      ${seccion('Mis Mensajes', '💬', [
+        'Envía consultas o comunicaciones al equipo de Calidad del Área.',
+        'Recibirás las respuestas en este mismo panel.',
+        'También puedes contactar directamente por WhatsApp con Rafael o Carlos usando los botones de acceso rápido.'
+      ])}
+      ${seccion('Directorio del Área', '📋', [
+        'Directorio de contacto del personal del AGS Sur de Córdoba: teléfonos, correos y cargos.',
+        'Usa el buscador o filtra por categoría para encontrar el contacto que necesitas.'
+      ])}
+      ${seccion('Buscador de Estándares', '🔍', [
+        'Herramienta de consulta de los 76 estándares del Manual ACSA para UGC.',
+        'Puedes buscar por texto libre, filtrar por grupo, criterio o bloque.',
+        'Consulta qué UGCs del área han acreditado ya cada estándar y qué evidencias presentaron.',
+        'El botón <em>← Mentoría</em> te devuelve directamente a tu panel.'
+      ])}`;
+
+    cont.innerHTML = `
+      <div class="guia-wrapper">
+        ${admin ? htmlAdmin : htmlUGC}
+      </div>`;
+  },
+
   _mostrarInformeEnApp(titulo, html) {
     const overlay = document.getElementById('overlay-informe');
     const iframe  = document.getElementById('informe-iframe');

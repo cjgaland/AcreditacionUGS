@@ -858,3 +858,60 @@ mark {
 
   aside { max-height: 88vh; }
 }
+
+/* ── UGC STATUS BADGES ──────────────────────────────────────────── */
+
+.ugc-status-wrap {
+  margin-top: 4px;
+}
+
+.ugc-status-loading,
+.ugc-status-msg {
+  font-size: 11.5px;
+  color: var(--text3);
+  font-style: italic;
+  display: block;
+  padding: 4px 0;
+}
+
+.ugc-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.ugc-est-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1.3;
+  transition: opacity .15s, transform .1s;
+  cursor: pointer;
+}
+
+.ugc-est-badge:hover {
+  opacity: .82;
+  transform: translateY(-1px);
+}
+
+.ugc-badge-cumple {
+  background: var(--green-light);
+  color: var(--green);
+  border: 1px solid #a8ddc0;
+}
+
+.ugc-badge-propuesto {
+  background: var(--amber-light);
+  color: var(--amber);
+  border: 1px solid #f5cfa0;
+}
+
+@media (max-width: 600px) {
+  .ugc-est-badge { font-size: 11px; padding: 3px 8px; }
+}

@@ -158,6 +158,11 @@ function buildCard(s) {
     ${reqHtml ? `
     <div class="section-title">✅ Requisitos de Evaluación (${s.requisitos.length})</div>
     <div class="req-list">${reqHtml}</div>` : ''}
+
+    <div class="section-title" style="margin-top:18px">🏥 Estado en las UGCs del Área</div>
+    <div class="ugc-status-wrap" id="ugc-status-${esc(s.codigo)}">
+      <span class="ugc-status-loading">Consultando Firestore…</span>
+    </div>
   </div>
 </div>`;
 }
@@ -190,6 +195,7 @@ function render() {
   if (state.expanded) {
     const el = grid.querySelector(`[data-code="${state.expanded}"]`);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    cargarEstadosUGC(state.expanded);
   }
 
   updateBadge();
@@ -625,3 +631,82 @@ bindChips('circuitoChips', 'circ',     'circ');
 document.getElementById('stat-total').textContent = STANDARDS.length;
 
 render();
+/* ═══════════════════════════════════════════════════════════════
+   ESTADOS POR UGC — integración Firebase
+   ═══════════════════════════════════════════════════════════════ */
+
+/* jshint esversion: 8 */
+/* global firebase, UGCS */
+
+const _fbConfig = {
+  apiKey:            "AIzaSyCb--Ep4Z1SGvCLALoOdWY6qLJN4FWirBM",
+  authDomain:        "acsa-ugc-sur-cordoba.firebaseapp.com",
+  projectId:         "acsa-ugc-sur-cordoba",
+  storageBucket:     "acsa-ugc-sur-cordoba.firebasestorage.app",
+  messagingSenderId: "1029063446265",
+  appId:             "1:1029063446265:web:096446d58020bed6575c28"
+};
+
+let _db   = null;
+let _auth = null;
+
+function _initFB() {
+  if (_db) return;
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(_fbConfig);
+    _db   = firebase.firestore();
+    _auth = firebase.auth();
+  } catch (e) { /* Firebase no disponible */ }
+}
+
+async function cargarEstadosUGC(codigo) {
+  _initFB();
+  const container = document.getElementById('ugc-status-' + codigo);
+  if (!container) return;
+
+  if (!_db) {
+    container.innerHTML = '<span class="ugc-status-msg">Firebase no disponible</span>';
+    return;
+  }
+
+  const user = _auth ? _auth.currentUser : null;
+  if (!user) {
+    container.innerHTML = '<span class="ugc-status-msg">Inicia sesión en Mentoría para ver el estado por UGC</span>';
+    return;
+  }
+
+  container.innerHTML = '<span class="ugc-status-loading">Consultando…</span>';
+
+  try {
+    const promises = UGCS.map(u =>
+      _db.collection('ugcs').doc(u.id).collection('estandares').doc(codigo).get()
+        .then(snap => ({ ugc: u, data: snap.exists ? snap.data() : null }))
+        .catch(() => ({ ugc: u, data: null }))
+    );
+
+    const resultados = await Promise.all(promises);
+    const conEstado  = resultados.filter(r =>
+      r.data && (r.data.estado === 'cumple' || r.data.estado === 'propuesto')
+    );
+
+    if (!conEstado.length) {
+      container.innerHTML = '<span class="ugc-status-msg">Ninguna UGC ha propuesto o acreditado este estándar todavía</span>';
+      return;
+    }
+
+    const badges = conEstado.map(r => {
+      const esCumple = r.data.estado === 'cumple';
+      const cls      = esCumple ? 'ugc-badge-cumple' : 'ugc-badge-propuesto';
+      const emoji    = esCumple ? '✅' : '⏳';
+      const nombre   = r.ugc.denominacion.replace(/^UGC\s+/i, '');
+      const url      = '../index.html?ugc=' + encodeURIComponent(r.ugc.id) +
+                       '&std=' + encodeURIComponent(codigo) + '&desde=buscador';
+      return '<a href="' + url + '" class="ugc-est-badge ' + cls + '" title="Ver evidencias en Mentoría">' +
+             emoji + ' ' + nombre + '</a>';
+    }).join('');
+
+    container.innerHTML = '<div class="ugc-badges-row">' + badges + '</div>';
+  } catch (err) {
+    container.innerHTML = '<span class="ugc-status-msg">No disponible (' + err.message + ')</span>';
+  }
+}

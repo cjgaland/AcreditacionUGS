@@ -208,7 +208,13 @@
   <span class="fab-badge" id="fabBadge"></span>
 </button>
 
+<!-- ── FIREBASE CDN (compat v9) — necesario para consultar estados de UGCs ── -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
 <!-- ── SCRIPTS: data first, then logic ── -->
+<script src="../ugcs.js"></script>
 <script src="estandares.js?v=4"></script>
 <script src="app.js?v=4"></script>
 
