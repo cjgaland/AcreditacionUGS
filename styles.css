@@ -1605,6 +1605,109 @@ mark {
     transform: none;
   }
 }
+/* ── Tarjetas UGC coloreadas según fase ──────────────────────── */
+.ugc-card-solicitud {
+  background: #eaf4fb;
+  border-color: #7bbdd6;
+}
+.ugc-card-autoev {
+  background: #edfaf3;
+  border-color: #5cb88a;
+}
+.ugc-card-eval {
+  background: #f2edfc;
+  border-color: #9b72e0;
+}
+.ugc-card-estab {
+  background: #fdf0f0;
+  border-color: #d97b7b;
+}
+.ugc-card-seguim {
+  background: #edfaf3;
+  border-color: #5cb88a;
+}
+.ugc-card-recert {
+  background: #fdf6e8;
+  border-color: #d4a742;
+}
+
+/* ── Fondos de estándares según estado ───────────────────────── */
+.est-item-cumple {
+  background: #edfaf3;
+  border-left: 3px solid var(--green);
+}
+.est-item-propuesto {
+  background: #f2edfc;
+  border-left: 3px solid #9b72e0;
+}
+.est-item-pendiente {
+  background: var(--surface);
+}
+
+/* ── Pestañas de mensajes (Activos / Historial) ──────────────── */
+.btn-tab {
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  background: none;
+  color: var(--text2);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color .15s, border-color .15s;
+}
+.btn-tab:hover { color: var(--accent2); }
+.btn-tab-active {
+  color: var(--accent2);
+  border-bottom-color: var(--accent2);
+  font-weight: 600;
+}
+
+/* ── Paneles de ficheros (Excel + PDF) en Utilidades ────────── */
+.util-ficheros-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 4px;
+}
+@media (max-width: 640px) {
+  .util-ficheros-grid { grid-template-columns: 1fr; }
+}
+.util-fichero-panel {
+  display: flex;
+  flex-direction: column;
+}
+.util-fichero-titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text1);
+  margin-bottom: 8px;
+}
+.util-dropzone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 20px 16px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+  cursor: default;
+  transition: border-color .15s, background .15s;
+  min-height: 120px;
+  text-align: center;
+}
+.util-dropzone.drag-over {
+  border-color: var(--accent2);
+  background: var(--accent-light);
+}
+
 /* ── Guía de Uso ─────────────────────────────────────────────── */
 .guia-wrapper {
   max-width: 820px;

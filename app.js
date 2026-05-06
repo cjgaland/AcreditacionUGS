@@ -402,8 +402,10 @@ const App = {
       el.innerHTML = '<div class="empty-state"><h3>Sin resultados</h3><p>Prueba a cambiar los filtros.</p></div>';
       return;
     }
-    el.innerHTML = lista.map(u => `
-      <div class="ugc-card" onclick="App.abrirFichaUGC('${u.id}')">
+    el.innerHTML = lista.map(u => {
+      const cardCls = App._faseCardCls(u.fase);
+      return `
+      <div class="ugc-card ${cardCls}" onclick="App.abrirFichaUGC('${u.id}')">
         <div class="ugc-card-top">
           <div>
             <div class="ugc-nombre">${u.denominacion}</div>
@@ -416,7 +418,8 @@ const App = {
           ${App._faseBadge(u.fase)}
           ${u.codigo_acsa ? `<span style="font-size:11px;color:var(--text3)">${u.codigo_acsa}</span>` : ''}
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   },
 
   _faseBadge(fase) {
@@ -431,6 +434,19 @@ const App = {
     };
     const cls = clases[fase] || 'fase-sin';
     return `<span class="fase-badge ${cls}">${fase || 'Sin solicitar'}</span>`;
+  },
+
+  _faseCardCls(fase) {
+    const mapa = {
+      'Sin solicitar':               '',
+      'Solicitud de Certificación':  'ugc-card-solicitud',
+      'Autoevaluación':              'ugc-card-autoev',
+      'Evaluación':                  'ugc-card-eval',
+      'Pendiente de estabilización': 'ugc-card-estab',
+      'Seguimiento':                 'ugc-card-seguim',
+      'Recertificación':             'ugc-card-recert',
+    };
+    return mapa[fase] || '';
   },
 
   _alertasCertHtml(ugc) {
@@ -730,7 +746,7 @@ const App = {
       const bdgClass = `badge-${estVal}`;
       const bdgLabel = { cumple: '✅ Cumple', propuesto: '⏳ Propuesto', pendiente: '⭕ Pendiente' }[estVal] || '⭕ Pendiente';
       return `
-        <div class="estandar-item" onclick="App.abrirModalEstandar('${s.codigo}','${ugcId}')">
+        <div class="estandar-item est-item-${estVal}" onclick="App.abrirModalEstandar('${s.codigo}','${ugcId}')">
           <div class="est-estado-dot ${dotClass}"></div>
           <div class="est-info">
             <span class="est-codigo">${s.codigo}</span>
@@ -798,8 +814,11 @@ const App = {
     docs.forEach(doc => {
       const d      = doc.data();
       const hiloId = d.hilo_id || doc.id;
+      // Capturar ugcId del path: ugcs/{ugcId}/mensajes/{msgId}
+      const pathParts = doc.ref.path.split('/');
+      const ugcId = pathParts.length >= 2 ? pathParts[1] : null;
       if (!map.has(hiloId)) map.set(hiloId, { id: hiloId, msgs: [] });
-      map.get(hiloId).msgs.push({ id: doc.id, ...d });
+      map.get(hiloId).msgs.push({ id: doc.id, _ugcId: ugcId, ...d });
     });
     map.forEach(h => h.msgs.sort((a, b) => {
       const ta = a.fecha && a.fecha.toDate ? a.fecha.toDate().getTime() : 0;
@@ -995,12 +1014,23 @@ const App = {
             ${App._inputField('Web',          'ei-web',       v('web'))}
           </div>
           <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Ciclo de certificación ACSA</div>
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Responsables del proyecto</div>
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
-              <div>
-                <label style="font-size:11px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:4px">Fecha de certificación</label>
-                <input type="date" id="ei-fecha-cert" value="${escHtml(v('fecha_certificacion') || ugc.fecha_fin || '')}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box">
-              </div>
+              ${App._inputField('Director/a UGC',           'ei-director',    v('director_nombre'))}
+              ${App._inputField('Responsable del proyecto',  'ei-responsable', v('responsable_proyecto_nombre'))}
+              ${App._inputField('Tipo de proyecto',          'ei-tipo-proy',   v('tipo_proyecto'))}
+            </div>
+          </div>
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Ciclo completo de acreditación ACSA</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+              ${App._dateField('Solicitud',                'ei-fecha-solic',   v('fecha_solicitud'))}
+              ${App._dateField('Autoevaluación desde',     'ei-autoev-desde',  v('fecha_autoevaluacion_desde'))}
+              ${App._dateField('Autoevaluación hasta',     'ei-autoev-hasta',  v('fecha_autoevaluacion_hasta'))}
+              ${App._dateField('Evaluación prevista',      'ei-fecha-prev',    v('fecha_prevista'))}
+              ${App._dateField('Resp. Solicitante desde',  'ei-resp-desde',    v('fecha_resp_solicitante_desde'))}
+              ${App._dateField('Resp. Solicitante hasta',  'ei-resp-hasta',    v('fecha_resp_solicitante_hasta'))}
+              ${App._dateField('Certificación',            'ei-fecha-cert',    v('fecha_certificacion') || ugc.fecha_fin || '')}
               <div>
                 <label style="font-size:11px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:4px">Nivel certificado</label>
                 <select id="ei-nivel-cert" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box">
@@ -1008,11 +1038,15 @@ const App = {
                   ${['Avanzado','Óptimo','Excelente'].map(n => `<option value="${n}" ${v('nivel_certificado')===n?'selected':''}>${n}</option>`).join('')}
                 </select>
               </div>
-              <div>
-                <label style="font-size:11px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:4px">Evaluación prevista</label>
-                <input type="date" id="ei-fecha-prev" value="${escHtml(v('fecha_prevista') || '')}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box">
-              </div>
+              ${App._dateField('Seguimiento (visita real)', 'ei-fecha-seg',    v('fecha_seguimiento'))}
+              ${App._dateField('Apercibimiento desde',     'ei-aperc-desde',  v('fecha_apercibimiento_desde'))}
+              ${App._dateField('Apercibimiento hasta',     'ei-aperc-hasta',  v('fecha_apercibimiento_hasta'))}
             </div>
+          </div>
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Otras ubicaciones</div>
+            <textarea id="ei-otras-ubic" rows="4" placeholder="Una ubicación por línea…" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;box-sizing:border-box">${escHtml((Array.isArray(v('otras_ubicaciones')) ? v('otras_ubicaciones') : []).join('\n'))}</textarea>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px">Una ubicación por línea</div>
           </div>
           <div style="margin-top:12px">
             <label style="font-size:11px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:4px">Observaciones</label>
@@ -1048,23 +1082,95 @@ const App = {
         </div>
         ${(() => {
           const fechaCertStr = v('fecha_certificacion') || ugc.fecha_fin;
-          if (!fechaCertStr) return '';
-          const f = calcularFechasACSA(fechaCertStr);
-          if (!f) return '';
-          const strSeg  = fmtFechaStr(f.seg.toISOString().split('T')[0]);
-          const strVenc = fmtFechaStr(f.venc.toISOString().split('T')[0]);
-          const strRen  = fmtFechaStr(f.renovar.toISOString().split('T')[0]);
+          const tieneNuevasFechas = v('fecha_solicitud') || v('fecha_autoevaluacion_desde') ||
+            v('fecha_resp_solicitante_desde') || v('fecha_seguimiento') || v('fecha_apercibimiento_desde');
+
+          let html = '<div style="margin-top:16px;padding:14px;background:var(--surface2);border-radius:8px">';
+          html += '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Ciclo completo de acreditación ACSA</div>';
+          html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">';
+
+          if (v('tipo_proyecto')) html += App._infoRow('Tipo', v('tipo_proyecto'));
+          if (v('fecha_solicitud'))               html += App._infoRow('Solicitud',               fmtFechaStr(v('fecha_solicitud')));
+          if (v('fecha_autoevaluacion_desde'))     html += App._infoRow('Autoevaluación desde',    fmtFechaStr(v('fecha_autoevaluacion_desde')));
+          if (v('fecha_autoevaluacion_hasta'))     html += App._infoRow('Autoevaluación hasta',    fmtFechaStr(v('fecha_autoevaluacion_hasta')));
+          if (v('fecha_prevista'))                 html += App._infoRow('Evaluación prevista',     fmtFechaStr(v('fecha_prevista')));
+          if (v('fecha_resp_solicitante_desde'))   html += App._infoRow('Resp. Solicitante desde', fmtFechaStr(v('fecha_resp_solicitante_desde')));
+          if (v('fecha_resp_solicitante_hasta'))   html += App._infoRow('Resp. Solicitante hasta', fmtFechaStr(v('fecha_resp_solicitante_hasta')));
+
+          if (fechaCertStr) {
+            html += App._infoRow('Certificación', fmtFechaStr(fechaCertStr));
+            if (v('nivel_certificado')) html += App._infoRow('Nivel certificado', v('nivel_certificado'));
+            if (v('fecha_seguimiento')) {
+              html += App._infoRow('Seguimiento (real)', fmtFechaStr(v('fecha_seguimiento')));
+            } else {
+              const f = calcularFechasACSA(fechaCertStr);
+              if (f) html += App._infoRow('Seguimiento (calc.)', fmtFechaStr(f.seg.toISOString().split('T')[0]));
+            }
+            if (v('fecha_apercibimiento_desde'))  html += App._infoRow('Apercibimiento desde', fmtFechaStr(v('fecha_apercibimiento_desde')));
+            if (v('fecha_apercibimiento_hasta'))  html += App._infoRow('Apercibimiento hasta', fmtFechaStr(v('fecha_apercibimiento_hasta')));
+            const fACSA = calcularFechasACSA(fechaCertStr);
+            if (fACSA) {
+              html += App._infoRow('Inicio renovación (~4 a.)', fmtFechaStr(fACSA.renovar.toISOString().split('T')[0]));
+              html += App._infoRow('Vencimiento (5 años)',       fmtFechaStr(fACSA.venc.toISOString().split('T')[0]));
+            }
+          } else if (!tieneNuevasFechas) {
+            html += '<div style="font-size:12px;color:var(--text3);padding:4px 0">Sin fechas registradas. Importa la Ficha de Proyecto PDF o edita manualmente.</div>';
+          }
+
+          html += '</div></div>';
+          return html;
+        })()}
+
+        ${(() => {
+          const dir = v('director_nombre');
+          const res = v('responsable_proyecto_nombre');
+          if (!dir && !res) return '';
           return `<div style="margin-top:16px;padding:14px;background:var(--surface2);border-radius:8px">
-            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Ciclo de 5 años ACSA</div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
-              ${App._infoRow('Certificación', fmtFechaStr(fechaCertStr))}
-              ${v('nivel_certificado') ? App._infoRow('Nivel certificado', v('nivel_certificado')) : ''}
-              ${App._infoRow('Seguimiento (2,5 años)', strSeg)}
-              ${App._infoRow('Inicio renovación (~4 años)', strRen)}
-              ${App._infoRow('Vencimiento (5 años)', strVenc)}
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Responsables del proyecto</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
+              ${dir ? App._infoRow('Director/a UGC', dir) : ''}
+              ${res ? App._infoRow('Responsable del proyecto', res) : ''}
             </div>
           </div>`;
         })()}
+
+        ${(() => {
+          const ubics = Array.isArray(v('otras_ubicaciones')) ? v('otras_ubicaciones') : [];
+          if (!ubics.length) return '';
+          return `<div style="margin-top:16px;padding:14px;background:var(--surface2);border-radius:8px">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Otras ubicaciones (${ubics.length})</div>
+            <ul style="margin:0;padding-left:18px">
+              ${ubics.map(u => `<li style="font-size:13px;padding:2px 0">${escHtml(u)}</li>`).join('')}
+            </ul>
+          </div>`;
+        })()}
+
+        ${(() => {
+          const hist = Array.isArray(ugcFs.historico_certificaciones) ? ugcFs.historico_certificaciones : [];
+          if (!hist.length) return '';
+          return `<div style="margin-top:16px;padding:14px;background:var(--surface2);border-radius:8px">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Histórico de certificaciones</div>
+            <div style="overflow-x:auto">
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead><tr style="background:var(--surface)">
+                  <th style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:left">Código</th>
+                  <th style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:left">Estado</th>
+                  <th style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:left">Fase</th>
+                  <th style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:left">Obtención</th>
+                  <th style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:left">Vencimiento</th>
+                </tr></thead>
+                <tbody>${hist.map(h => `<tr>
+                  <td style="padding:5px 8px;border-bottom:1px solid var(--border);font-family:monospace">${escHtml(h.codigo)}</td>
+                  <td style="padding:5px 8px;border-bottom:1px solid var(--border)">${escHtml(h.estado)}</td>
+                  <td style="padding:5px 8px;border-bottom:1px solid var(--border)">${escHtml(h.fase)}</td>
+                  <td style="padding:5px 8px;border-bottom:1px solid var(--border)">${fmtFechaStr(h.fecha_obtencion)}</td>
+                  <td style="padding:5px 8px;border-bottom:1px solid var(--border)">${fmtFechaStr(h.fecha_vencimiento)}</td>
+                </tr>`).join('')}</tbody>
+              </table>
+            </div>
+          </div>`;
+        })()}
+
         <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
           <h4 style="font-size:13px;font-weight:600;margin-bottom:12px">Cambiar fase del proceso</h4>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -1090,20 +1196,41 @@ const App = {
     </div>`;
   },
 
+  _dateField(label, id, value) {
+    return `<div>
+      <label style="font-size:11px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:4px">${label}</label>
+      <input type="date" id="${id}" value="${escHtml(value || '')}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box">
+    </div>`;
+  },
+
   async guardarInfoUGC(ugcId) {
     const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    const otrasRaw = g('ei-otras-ubic');
+    const otras = otrasRaw ? otrasRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0) : null;
     const data = {
-      denominacion:        g('ei-nombre'),
-      codigo_acsa:         g('ei-codigo'),
-      ubicacion:           g('ei-ubicacion'),
-      direccion:           g('ei-direccion'),
-      telefono1:           g('ei-telefono'),
-      correo:              g('ei-correo'),
-      web:                 g('ei-web'),
-      observaciones:       g('ei-observaciones'),
-      fecha_certificacion: g('ei-fecha-cert') || null,
-      nivel_certificado:   g('ei-nivel-cert') || null,
-      fecha_prevista:      g('ei-fecha-prev') || null,
+      denominacion:                  g('ei-nombre'),
+      codigo_acsa:                   g('ei-codigo'),
+      ubicacion:                     g('ei-ubicacion'),
+      direccion:                     g('ei-direccion'),
+      telefono1:                     g('ei-telefono'),
+      correo:                        g('ei-correo'),
+      web:                           g('ei-web'),
+      observaciones:                 g('ei-observaciones'),
+      tipo_proyecto:                 g('ei-tipo-proy')     || null,
+      director_nombre:              g('ei-director')      || null,
+      responsable_proyecto_nombre:  g('ei-responsable')   || null,
+      fecha_certificacion:           g('ei-fecha-cert')   || null,
+      nivel_certificado:             g('ei-nivel-cert')   || null,
+      fecha_prevista:                g('ei-fecha-prev')   || null,
+      fecha_solicitud:               g('ei-fecha-solic')  || null,
+      fecha_autoevaluacion_desde:    g('ei-autoev-desde') || null,
+      fecha_autoevaluacion_hasta:    g('ei-autoev-hasta') || null,
+      fecha_resp_solicitante_desde:  g('ei-resp-desde')   || null,
+      fecha_resp_solicitante_hasta:  g('ei-resp-hasta')   || null,
+      fecha_seguimiento:             g('ei-fecha-seg')    || null,
+      fecha_apercibimiento_desde:    g('ei-aperc-desde')  || null,
+      fecha_apercibimiento_hasta:    g('ei-aperc-hasta')  || null,
+      otras_ubicaciones:             otras,
     };
     try {
       await db.collection(COL.ugcs).doc(ugcId).set(data, { merge: true });
@@ -1318,35 +1445,64 @@ const App = {
   /* ══════════════════════════════════════════════════
      MENSAJES
   ══════════════════════════════════════════════════ */
-  async cargarMensajesAdmin() {
+  async cargarMensajesAdmin(verHistorial) {
     const el = document.getElementById('mensajes-admin-list');
     el.innerHTML = '<div class="loading">Cargando mensajes…</div>';
+
+    // Cabecera con pestañas Activos / Historial
+    const tabActivo = !verHistorial;
+    const tabsHtml = `
+      <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border)">
+        <button onclick="App.cargarMensajesAdmin(false)" class="btn-tab ${tabActivo ? 'btn-tab-active' : ''}">
+          📬 Activos
+        </button>
+        <button onclick="App.cargarMensajesAdmin(true)" class="btn-tab ${!tabActivo ? 'btn-tab-active' : ''}">
+          📂 Historial
+        </button>
+      </div>`;
+
     try {
+      // Usar collectionGroup sin orderBy para evitar índice compuesto
+      // y filtrar/ordenar en el cliente
       const snap = await db.collectionGroup('mensajes')
         .where('para', '==', 'admin')
-        .orderBy('fecha', 'desc').limit(50).get();
+        .limit(300).get();
 
-      if (snap.empty) {
-        el.innerHTML = '<div class="empty-state"><h3>Sin mensajes</h3></div>';
+      // Ordenar por fecha descendente en el cliente
+      const docs = snap.docs.slice().sort((a, b) => {
+        const ta = a.data().fecha ? a.data().fecha.toMillis() : 0;
+        const tb = b.data().fecha ? b.data().fecha.toMillis() : 0;
+        return tb - ta;
+      });
+
+      if (!docs.length) {
+        el.innerHTML = tabsHtml + '<div class="empty-state"><h3>Sin mensajes</h3></div>';
         return;
       }
 
-      // Mapear ugcId por mensaje (path: ugcs/{ugcId}/mensajes/{msgId})
-      const ugcPorMsgId = {};
-      snap.docs.forEach(doc => { ugcPorMsgId[doc.id] = doc.ref.path.split('/')[1]; });
+      const hilos = App._agruparHilos(docs);
 
-      const hilos = App._agruparHilos(snap.docs);
+      // Filtrar según pestaña: Activos = algún msg no leído
+      const hilosFiltrados = verHistorial
+        ? hilos.filter(h => h.msgs.every(m => m.leido))
+        : hilos.filter(h => h.msgs.some(m => !m.leido));
 
-      el.innerHTML = hilos.map(hilo => {
+      if (!hilosFiltrados.length) {
+        const txt = verHistorial ? 'No hay mensajes en el historial.' : 'Sin mensajes pendientes. Ve al Historial para ver mensajes pasados.';
+        el.innerHTML = tabsHtml + `<div class="empty-state"><p>${txt}</p></div>`;
+        return;
+      }
+
+      el.innerHTML = tabsHtml + hilosFiltrados.map(hilo => {
         const [first, ...replies] = hilo.msgs;
-        const ugcId = ugcPorMsgId[hilo.id] || ugcPorMsgId[first.id];
+        const ugcId = hilo.msgs.reduce((id, m) => id || m._ugcId, null) || first._ugcId;
         const ugc   = UGCS.find(u => u.id === ugcId);
         const tieneNoLeido = hilo.msgs.some(m => !m.leido);
         return `
           <div class="hilo-card ${tieneNoLeido ? 'unread' : ''}">
             <div class="hilo-msg">
               <div class="mensaje-head">
-                <span class="mensaje-de">🏥 ${escHtml(first.de_nombre || first.de_uid)} · <strong>${ugc ? ugc.denominacion : ugcId}</strong></span>
+                <span class="mensaje-de">🏥 ${escHtml(first.de_nombre || first.de_uid)} · <strong>${ugc ? escHtml(ugc.denominacion) : escHtml(ugcId || '—')}</strong></span>
                 <span class="mensaje-date">${fmtFechaHora(first.fecha)}</span>
                 ${first.tipo ? `<span class="mensaje-tipo">${escHtml(first.tipo)}</span>` : ''}
               </div>
@@ -1355,14 +1511,34 @@ const App = {
             </div>
             ${replies.length ? `<div class="hilo-replies">${replies.map(r => App._msgHtml(r)).join('')}</div>` : ''}
             <div class="mensaje-actions">
-              ${tieneNoLeido ? `<button class="btn-sm" onclick="App.marcarHiloLeido('${ugcId}','${hilo.id}','admin')">Marcar leído</button>` : ''}
-              <button class="btn-sm" onclick="App.abrirFichaUGC('${ugcId}')">Ver conversación →</button>
-              <button class="btn-danger btn-sm" onclick="App.eliminarMensaje('${ugcId}','${first.id}','admin')">🗑</button>
+              ${tieneNoLeido ? `<button class="btn-sm" onclick="App.marcarHiloLeido('${escHtml(ugcId)}','${hilo.id}','admin')">✓ Marcar leído</button>` : ''}
+              ${ugcId ? `<button class="btn-sm" onclick="App.abrirFichaUGC('${escHtml(ugcId)}')">Ver UGC →</button>` : ''}
+              <button class="btn-danger btn-sm" onclick="App.eliminarMensajeAdmin('${escHtml(ugcId)}','${first.id}')">🗑 Borrar</button>
             </div>
           </div>`;
       }).join('');
     } catch(e) {
-      el.innerHTML = '<div class="empty-state"><p>Error al cargar mensajes.</p></div>';
+      console.error('cargarMensajesAdmin:', e);
+      el.innerHTML = tabsHtml + `<div class="empty-state"><p>Error al cargar mensajes: ${escHtml(e.message)}</p></div>`;
+    }
+  },
+
+  async eliminarMensajeAdmin(ugcId, msgId) {
+    if (!ugcId || !msgId) { App.showToast('No se puede identificar el mensaje'); return; }
+    if (!confirm('¿Eliminar este mensaje? Esta acción no se puede deshacer.')) return;
+    try {
+      const batch = db.batch();
+      // Borrar el mensaje raíz
+      batch.delete(db.collection(COL.ugcs).doc(ugcId).collection('mensajes').doc(msgId));
+      // Borrar respuestas del mismo hilo
+      const repliesSnap = await db.collection(COL.ugcs).doc(ugcId)
+        .collection('mensajes').where('hilo_id', '==', msgId).get();
+      repliesSnap.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+      App.showToast('✅ Mensaje eliminado');
+      App.cargarMensajesAdmin();
+    } catch(e) {
+      App.showToast('❌ Error al eliminar: ' + e.message);
     }
   },
 
@@ -1609,7 +1785,7 @@ const App = {
       const bdgClass = `badge-${estVal}`;
       const bdgLabel = { cumple: '✅ Cumple', propuesto: '⏳ Propuesto', pendiente: '⭕ Pendiente' }[estVal] || '⭕ Pendiente';
       return `
-        <div class="estandar-item" onclick="App.abrirModalEstandar('${s.codigo}','${ugcId}')">
+        <div class="estandar-item est-item-${estVal}" onclick="App.abrirModalEstandar('${s.codigo}','${ugcId}')">
           <div class="est-estado-dot ${dotClass}"></div>
           <div class="est-info">
             <span class="est-codigo">${s.codigo}</span>
@@ -1662,23 +1838,48 @@ const App = {
     }
   },
 
-  async cargarMisMensajes() {
+  async cargarMisMensajes(verHistorial) {
     const perfil = getPerfil();
     const ugcId  = perfil.ugc_id;
     const el     = document.getElementById('mis-mensajes-list');
     el.innerHTML = '<div class="loading">Cargando mensajes…</div>';
 
+    const tabActivo = !verHistorial;
+    const tabsHtml = `
+      <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border)">
+        <button onclick="App.cargarMisMensajes(false)" class="btn-tab ${tabActivo ? 'btn-tab-active' : ''}">
+          📬 Activos
+        </button>
+        <button onclick="App.cargarMisMensajes(true)" class="btn-tab ${!tabActivo ? 'btn-tab-active' : ''}">
+          📂 Historial
+        </button>
+      </div>`;
+
     try {
       const snap = await db.collection(COL.ugcs).doc(ugcId)
-        .collection('mensajes').orderBy('fecha', 'asc').limit(60).get();
+        .collection('mensajes').orderBy('fecha', 'asc').limit(200).get();
 
       if (snap.empty) {
-        el.innerHTML = '<div class="empty-state"><h3>Sin mensajes</h3><p>Usa el formulario para contactar con el equipo de mentoría.</p></div>';
+        el.innerHTML = tabsHtml + '<div class="empty-state"><h3>Sin mensajes</h3><p>Usa el formulario para contactar con el equipo de mentoría.</p></div>';
         return;
       }
 
       const hilos = App._agruparHilos(snap.docs);
-      el.innerHTML = hilos.map(hilo => {
+
+      // Activos = algún mensaje no leído de admin; Historial = todos leídos
+      const hilosFiltrados = verHistorial
+        ? hilos.filter(h => h.msgs.every(m => !m.leido || m.de_rol !== 'admin' || m.leido))
+        : hilos.filter(h => h.msgs.some(m => !m.leido));
+
+      // Si historial, mostrar todos; si activos, mostrar pendientes
+      const hilosMostrar = verHistorial ? hilos : hilosFiltrados;
+
+      if (!hilosMostrar.length) {
+        el.innerHTML = tabsHtml + '<div class="empty-state"><h3>Sin mensajes</h3><p>Usa el formulario para contactar con el equipo de mentoría.</p></div>';
+        return;
+      }
+
+      el.innerHTML = tabsHtml + hilosMostrar.map(hilo => {
         const [first, ...replies] = hilo.msgs;
         const tieneNoLeido = hilo.msgs.some(m => !m.leido && m.de_rol === 'admin');
         return `
@@ -1686,13 +1887,14 @@ const App = {
             ${App._msgHtml(first)}
             ${replies.length ? `<div class="hilo-replies">${replies.map(r => App._msgHtml(r)).join('')}</div>` : ''}
             <div class="mensaje-actions">
-              ${tieneNoLeido ? `<button class="btn-sm" onclick="App.marcarHiloLeido('${ugcId}','${hilo.id}','mis')">Marcar leído</button>` : ''}
+              ${tieneNoLeido ? `<button class="btn-sm" onclick="App.marcarHiloLeido('${ugcId}','${hilo.id}','mis')">✓ Marcar leído</button>` : ''}
               <button class="btn-sm" onclick="App.iniciarRespuestaUGC('${hilo.id}')">💬 Responder</button>
             </div>
           </div>`;
       }).join('');
     } catch(e) {
-      el.innerHTML = '<div class="empty-state"><p>Error al cargar mensajes.</p></div>';
+      console.error('cargarMisMensajes:', e);
+      el.innerHTML = tabsHtml + `<div class="empty-state"><p>Error al cargar mensajes: ${escHtml(e.message)}</p></div>`;
     }
   },
 

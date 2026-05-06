@@ -27,6 +27,9 @@
   <!-- ── SheetJS (lectura Excel en navegador) ── -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
+  <!-- ── PDF.js (lectura PDF en navegador) ── -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -547,7 +550,7 @@
           </div>
         </div>
 
-        <!-- ── Tarjeta: Importar estándares desde Excel ── -->
+        <!-- ── Tarjeta: Importar Proyectos ── -->
         <div class="util-card">
           <div class="util-card-header">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -557,12 +560,11 @@
               <line x1="16" y1="17" x2="8" y2="17"/>
               <polyline points="10 9 9 9 8 9"/>
             </svg>
-            <h3>Importar estándares desde Excel</h3>
+            <h3>Importar Proyectos de ME_jora C</h3>
           </div>
           <p class="util-card-desc">
-            Carga el archivo Excel directamente desde ME_jora C (<em>«Documentos de evidencias y áreas de mejora»</em>)
-            o un archivo ya transformado. La utilidad detecta el formato automáticamente, agrupa por estándar
-            y actualiza <em>Documentos aportados</em>, <em>Evidencias</em> y <em>Área de mejora</em>.
+            Importa estándares desde el Excel de evidencias y/o completa la ficha de la UGC desde la
+            <strong>Ficha de Proyecto PDF</strong> de ME_jora C. Ambas importaciones son independientes.
           </p>
 
           <div class="util-form">
@@ -574,18 +576,19 @@
               </select>
             </div>
 
-            <!-- 2. Filtro de fechas (siempre visible) -->
+            <!-- 2. Filtro de fechas -->
             <div class="form-group util-fechas-wrap" id="util-fechas-wrap">
               <label>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px">
                   <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
                   <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
-                Rango de fechas a importar <span style="font-weight:400;color:var(--text3)">(filtra los registros del Excel por fecha de subida en Mejora C)</span>
+                Rango de fechas del Excel
+                <span style="font-weight:400;color:var(--text3)">(filtra por fecha de subida en ME_jora C — solo afecta al Excel)</span>
               </label>
               <div class="util-fechas-row">
                 <div class="util-fecha-field">
-                  <span>Desde</span>
+                  <span>Desde <span style="font-weight:400;color:var(--text3)">(opcional)</span></span>
                   <input type="date" id="util-fecha-desde" onchange="Utilidades.aplicarFiltro()">
                 </div>
                 <div class="util-fecha-field">
@@ -607,50 +610,103 @@
               </select>
             </div>
 
-            <!-- 4. Fichero con tooltip de ayuda -->
-            <div class="form-group">
-              <label class="util-label-con-ayuda">
-                Archivo Excel (.xlsx)
-                <span class="util-ayuda" tabindex="0" role="button" aria-label="Cómo obtener el archivo">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="16" x2="12" y2="12"/>
-                    <line x1="12" y1="8" x2="12.01" y2="8"/>
-                  </svg>
-                  <span class="util-ayuda-popover" role="tooltip">
-                    Por favor, obtén el fichero Excel descargado del área
-                    <strong>Proyectos &rsaquo; [Código del Proyecto] &rsaquo; Autoevaluación &rsaquo;
-                    Informes y listados &rsaquo; Documentos de evidencias y áreas de mejora</strong>
-                    de la <em>Plataforma Web Mejora C</em> de la ACSA.
+            <!-- 4. Dos paneles de ficheros: Excel + PDF -->
+            <div class="util-ficheros-grid">
+
+              <!-- Panel izquierdo: Excel -->
+              <div class="util-fichero-panel">
+                <div class="util-fichero-titulo">
+                  📊 Excel de estándares
+                  <span class="util-ayuda" tabindex="0" role="button" aria-label="Cómo obtener el Excel">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="16" x2="12" y2="12"/>
+                      <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                    <span class="util-ayuda-popover" role="tooltip">
+                      Descarga el archivo desde ME_jora C:
+                      <strong>Proyectos &rsaquo; [Código] &rsaquo; Autoevaluación &rsaquo;
+                      Informes y listados &rsaquo; Documentos de evidencias y áreas de mejora</strong>
+                    </span>
                   </span>
-                </span>
-              </label>
-              <div class="util-file-wrap">
-                <label class="btn-outline util-file-label" for="util-file">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="17 8 12 3 7 8"/>
-                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </div>
+                <div class="util-dropzone" id="util-dropzone-excel"
+                     ondragover="Utilidades.dragOver(event,'excel')"
+                     ondragleave="Utilidades.dragLeave(event,'excel')"
+                     ondrop="Utilidades.drop(event,'excel')">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text3);margin-bottom:6px">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
                   </svg>
-                  Seleccionar archivo
-                </label>
-                <input type="file" id="util-file" accept=".xlsx,.xls,.ods"
-                       style="display:none" onchange="Utilidades.leerExcel(this)">
-                <span id="util-file-info" style="font-size:13px;color:var(--text2);margin-left:10px"></span>
+                  <span style="font-size:12px;color:var(--text3)">Arrastra el Excel aquí o</span>
+                  <label class="btn-outline util-file-label" for="util-file" style="margin-top:6px">
+                    Seleccionar archivo
+                  </label>
+                  <input type="file" id="util-file" accept=".xlsx,.xls,.ods"
+                         style="display:none" onchange="Utilidades.leerExcel(this)">
+                </div>
+                <span id="util-file-info" style="font-size:12px;color:var(--text2);margin-top:6px;display:block;text-align:center"></span>
               </div>
-            </div>
+
+              <!-- Panel derecho: PDF Ficha de Proyecto -->
+              <div class="util-fichero-panel">
+                <div class="util-fichero-titulo">
+                  📋 Ficha de Proyecto PDF
+                  <span class="util-ayuda" tabindex="0" role="button" aria-label="Cómo obtener el PDF">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="12" y1="16" x2="12" y2="12"/>
+                      <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                    <span class="util-ayuda-popover" role="tooltip">
+                      En ME_jora C:
+                      <strong>Menú del proyecto &rsaquo; Ficha del Proyecto</strong>.
+                      Una vez en la página, haz clic con el botón derecho en cualquier lugar
+                      y selecciona <strong>«Imprimir»</strong> &rsaquo; <strong>«Guardar como PDF»</strong>
+                      (o «Exportar a PDF» según el navegador).
+                    </span>
+                  </span>
+                </div>
+                <div class="util-dropzone" id="util-dropzone-pdf"
+                     ondragover="Utilidades.dragOver(event,'pdf')"
+                     ondragleave="Utilidades.dragLeave(event,'pdf')"
+                     ondrop="Utilidades.drop(event,'pdf')">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text3);margin-bottom:6px">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="9" y1="13" x2="15" y2="13"/>
+                    <line x1="9" y1="17" x2="11" y2="17"/>
+                  </svg>
+                  <span style="font-size:12px;color:var(--text3)">Arrastra el PDF aquí o</span>
+                  <label class="btn-outline util-file-label" for="util-pdf-file" style="margin-top:6px">
+                    Seleccionar PDF
+                  </label>
+                  <input type="file" id="util-pdf-file" accept=".pdf"
+                         style="display:none" onchange="Utilidades.leerPDF(this)">
+                </div>
+                <span id="util-pdf-file-info" style="font-size:12px;color:var(--text2);margin-top:6px;display:block;text-align:center"></span>
+              </div>
+
+            </div><!-- /util-ficheros-grid -->
           </div>
 
-          <!-- Preview -->
-          <div id="util-preview" style="margin-top:16px"></div>
-
-          <!-- Botón importar -->
-          <div style="margin-top:16px;text-align:right">
+          <!-- Botón Excel arriba de su preview -->
+          <div style="margin-top:16px;display:flex;justify-content:flex-end">
             <button id="util-btn-importar" class="btn-primary" style="display:none"
                     onclick="Utilidades.importar()">
-              ⬆ Importar a Firestore
+              ⬆ Importar estándares
             </button>
           </div>
+          <div id="util-preview" style="margin-top:8px"></div>
+
+          <!-- Botón PDF arriba de su preview -->
+          <div style="margin-top:16px;display:flex;justify-content:flex-end">
+            <button id="util-btn-importar-pdf" class="btn-primary" style="display:none;background:var(--accent2)"
+                    onclick="Utilidades.importarProyecto()">
+              ⬆ Importar datos del proyecto
+            </button>
+          </div>
+          <div id="util-pdf-preview"></div>
         </div>
 
         <!-- ── Tarjeta: Migrar datos entre UGCs ── -->
