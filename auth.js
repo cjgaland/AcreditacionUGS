@@ -226,6 +226,7 @@ function ocultarPantallaLogin() {
   document.getElementById('screen-login').style.display   = 'none';
   document.getElementById('screen-app').style.display     = 'block';
   document.getElementById('screen-pending').style.display = 'none';
+  if (typeof App !== 'undefined' && App._aplicarTemaGuardado) App._aplicarTemaGuardado();
 }
 
 function mostrarErrorLogin(msg) {
@@ -310,6 +311,16 @@ function abrirWhatsApp(telefono, nombreUGC, texto) {
   const tel = String(telefono).replace(/\D/g, '');
   const msg = encodeURIComponent(texto || `Hola, soy de la ${nombreUGC}. Os contacto desde la plataforma de mentoría ACSA.`);
   window.open(`https://wa.me/${tel}?text=${msg}`, '_blank');
+}
+
+function togglePass(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.querySelector('.eye-show').style.display = show ? 'none' : '';
+  btn.querySelector('.eye-hide').style.display = show ? '' : 'none';
+  btn.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
 }
 
 function _traducirError(code) {

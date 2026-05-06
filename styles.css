@@ -33,6 +33,35 @@
   --sidebar-w:    240px;
 }
 
+/* ── MODO OSCURO ── */
+body.dark-mode {
+  --bg:           #0f1923;
+  --surface:      #1a2535;
+  --surface2:     #243040;
+  --border:       #2e3f55;
+  --text:         #e2eaf3;
+  --text2:        #8fa8c2;
+  --text3:        #5a7090;
+  --accent:       #1a3255;
+  --accent2:      #3a7bbf;
+  --accent-light: #1a3050;
+  --green-light:  #0e2a1a;
+  --amber-light:  #2a1e06;
+  --red-light:    #2a0e0e;
+  --purple-light: #1e0e2a;
+  --shadow:       0 2px 12px rgba(0,0,0,.35);
+  --shadow-lg:    0 8px 32px rgba(0,0,0,.55);
+}
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--border);
+}
+body.dark-mode .app-header { background: #12202f; }
+body.dark-mode .sidebar    { background: #12202f; border-right-color: var(--border); }
+
 /* ── RESET ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -159,6 +188,30 @@ input:focus, select:focus, textarea:focus {
   border-radius: var(--radius-sm);
   font-size: 14px;
 }
+
+.pass-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.pass-wrap input {
+  padding-right: 44px;
+}
+.pass-toggle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 42px;
+  background: none;
+  border: none;
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color .2s;
+}
+.pass-toggle:hover { color: var(--accent2); }
 
 .login-btn {
   width: 100%;
@@ -1709,40 +1762,169 @@ mark {
 }
 
 /* ── Guía de Uso ─────────────────────────────────────────────── */
-.guia-wrapper {
-  max-width: 820px;
+.guia-wrapper { max-width: 860px; }
+
+/* Barra de pestañas */
+.guia-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
 }
-.guia-intro {
-  background: var(--accent-light);
-  border-left: 4px solid var(--accent2);
+.guia-tab {
+  flex: 1 1 auto;
+  min-width: 90px;
+  padding: 9px 14px;
+  border: none;
+  background: none;
   border-radius: var(--radius-sm);
-  padding: 14px 18px;
-  margin-bottom: 24px;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text2);
-  line-height: 1.6;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background .2s, color .2s;
+  white-space: nowrap;
 }
+.guia-tab:hover { background: var(--surface); color: var(--text); }
+.guia-tab.active {
+  background: var(--accent2);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(30,91,140,.35);
+}
+.guia-tab-icon { font-size: 15px; }
+
+/* Panel de contenido */
+.guia-panel { display: none; }
+.guia-panel.active { display: block; }
+
+/* Hero de bienvenida */
+.guia-hero {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+  border-radius: var(--radius);
+  padding: 28px 28px 24px;
+  color: #fff;
+  margin-bottom: 20px;
+}
+.guia-hero h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.guia-hero p { font-size: 14px; opacity: .88; line-height: 1.6; margin: 0; }
+.guia-hero-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.guia-hero-chip {
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.3);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Tarjetas de acceso rápido */
+.guia-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.guia-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: box-shadow .2s, border-color .2s, transform .15s;
+}
+.guia-card:hover {
+  border-color: var(--accent2);
+  box-shadow: 0 4px 16px rgba(30,91,140,.15);
+  transform: translateY(-2px);
+}
+.guia-card-icon { font-size: 28px; }
+.guia-card-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.guia-card-desc  { font-size: 12px; color: var(--text2); line-height: 1.4; }
+
+/* Secciones de contenido */
 .guia-seccion {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px 22px;
   margin-bottom: 16px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow);
 }
 .guia-seccion-titulo {
   font-size: 15px;
   font-weight: 700;
-  color: var(--text1);
-  margin-bottom: 12px;
+  color: var(--text);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
 }
+.guia-seccion-titulo span { font-size: 18px; }
+
+/* Steps numerados */
+.guia-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.guia-step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.guia-step-num {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  border-radius: 50%;
+  background: var(--accent2);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.guia-step-text {
+  font-size: 13.5px;
+  color: var(--text2);
+  line-height: 1.6;
+  padding-top: 3px;
+}
+.guia-step-text strong { color: var(--text); }
+
+/* Lista simple */
 .guia-lista {
   list-style: none;
   padding: 0;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
 }
 .guia-lista li {
   font-size: 13.5px;
@@ -1758,3 +1940,69 @@ mark {
   color: var(--accent2);
   font-weight: 700;
 }
+
+/* Tip / nota */
+.guia-tip {
+  background: var(--accent-light);
+  border-left: 3px solid var(--accent2);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.55;
+  margin-top: 14px;
+}
+.guia-tip strong { color: var(--accent2); }
+
+/* Tabla de roles */
+.guia-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 4px;
+}
+.guia-table th {
+  background: var(--surface2);
+  color: var(--text);
+  font-weight: 600;
+  padding: 9px 12px;
+  text-align: left;
+  border: 1px solid var(--border);
+}
+.guia-table td {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  vertical-align: top;
+}
+.guia-table tr:nth-child(even) td { background: var(--surface2); }
+
+/* Badge de rol en guía */
+.gbadge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.gbadge-admin  { background: #fde0e0; color: #b03030; }
+.gbadge-ugc    { background: #d5ede0; color: #2d7a4f; }
+.gbadge-pend   { background: #fdefd3; color: #b06000; }
+
+/* Botón descargar manual */
+.guia-btn-pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent2);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 10px 20px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: opacity .2s;
+}
+.guia-btn-pdf:hover { opacity: .88; }
