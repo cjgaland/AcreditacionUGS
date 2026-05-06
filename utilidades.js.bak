@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 /* jshint esversion: 9 */
-/* global firebase, db, COL, UGCS, XLSX, App, getUser */
+/* global firebase, db, COL, UGCS, XLSX, App */
 
 'use strict';
 
@@ -237,48 +237,22 @@ const Utilidades = (() => {
   // _procesarFormatoTransformado(rows)  —  formato ya agrupado
   // ──────────────────────────────────────────────────────────────
   function _procesarFormatoTransformado(rows) {
-    const claveEst    = _detectarCol(rows, ['estándar', 'estandar', 'standard', 'código', 'codigo', 'es ']);
-    const claveDocs   = _detectarCol(rows, ['documentos aportados', 'documentos', 'docs', 'documento']);
-    const claveEvid   = _detectarCol(rows, ['evidencias', 'evidencia']);
-    // Columnas adicionales presentes en el Listado de estándares de ME_jora C
-    const claveAM     = _detectarCol(rows, ['área de mejora', 'areas de mejora', 'mejora']);
-    const claveEstado = _detectarCol(rows, ['estado']);
+    const claveEst  = _detectarCol(rows, ['estándar', 'estandar', 'standard', 'código', 'codigo', 'es ']);
+    const claveDocs = _detectarCol(rows, ['documentos aportados', 'documentos', 'docs', 'documento']);
+    const claveEvid = _detectarCol(rows, ['evidencias', 'evidencia']);
 
     if (!claveEst) {
       App.showToast('No se encontró la columna de estándares (Estándar / Código)');
       return;
     }
 
-    // Regex para extraer solo la parte ES X YY.ZZ_WW del código
-    // (el Listado de ME_jora C añade texto adicional como "Grupo I - O")
-    const RE_COD = /^(ES \d \d{2}\.\d{2}_\d{2})/;
-
-    // Mapa de valores Estado del Excel (en español, mayúsculas/minúsculas) a Firestore
-    const MAPA_ESTADO = {
-      'cumple':             'cumple',
-      'propuesto':          'propuesto',
-      'propuesto a cumple': 'propuesto',
-      'pendiente':          'pendiente',
-    };
-
     _filas = rows
-      .map(r => {
-        // Normalizar código: extraer solo "ES X YY.ZZ_WW", ignorar sufijos ("Grupo I", etc.)
-        const codigoRaw  = String(r[claveEst] || '').trim();
-        const mCod       = codigoRaw.match(RE_COD);
-        const codigo     = mCod ? mCod[1] : codigoRaw;
-
-        const estadoRaw  = claveEstado ? String(r[claveEstado] || '').trim().toLowerCase() : '';
-        const estadoExcel = MAPA_ESTADO[estadoRaw] || '';
-
-        return {
-          codigo,
-          documento:    String(r[claveDocs] || '').trim(),
-          evidencia:    String(r[claveEvid]  || '').trim(),
-          area_mejora:  String(r[claveAM]    || '').trim(),
-          estadoExcel,
-        };
-      })
+      .map(r => ({
+        codigo:      String(r[claveEst]  || '').trim(),
+        documento:   String(r[claveDocs] || '').trim(),
+        evidencia:   String(r[claveEvid] || '').trim(),
+        area_mejora: '',
+      }))
       .filter(r => r.codigo.length > 0);
 
     if (!_filas.length) {
@@ -287,11 +261,7 @@ const Utilidades = (() => {
     }
 
     const info = document.getElementById('util-file-info');
-    if (info) {
-      const tieneEstado = _filas.some(f => f.estadoExcel);
-      const sufijo = tieneEstado ? ' · con columna Estado' : '';
-      info.textContent = _fileName + ' · ' + _filas.length + ' estándares (formato transformado)' + sufijo;
-    }
+    if (info) info.textContent = _fileName + ' · ' + _filas.length + ' estándares (formato transformado)';
 
     _mostrarPreview();
   }
@@ -433,18 +403,7 @@ const Utilidades = (() => {
         if (fila.documento)   data.documento_mejora_c = fila.documento;
         if (fila.evidencia)   data.evidencia_texto    = fila.evidencia;
         if (fila.area_mejora) data.area_mejora        = fila.area_mejora;
-
-        // Determinar el estado a aplicar: desde selector global o desde columna Excel
-        const estadoAplicar = (estado === 'excel') ? (fila.estadoExcel || null)
-          : (estado !== 'mantener') ? estado : null;
-
-        if (estadoAplicar) {
-          data.estado = estadoAplicar;
-          if (estadoAplicar === 'cumple') {
-            data.validado_en  = firebase.firestore.FieldValue.serverTimestamp();
-            data.validado_por = getUser() ? getUser().uid : 'Importación Excel';
-          }
-        }
+        if (estado !== 'mantener') data.estado        = estado;
 
         batch.set(ref, data, { merge: true });
         ops++;
@@ -459,10 +418,7 @@ const Utilidades = (() => {
 
       if (ops > 0) await batch.commit();
 
-      const _etqEstado = { cumple: '✅ Cumple', propuesto: '⏳ Propuesto',
-        mantener: 'estado sin cambiar', excel: 'estado desde Excel' };
-      const _etq = _etqEstado[estado] || estado;
-      App.showToast('✅ ' + total + ' estándares importados · ' + _etq);
+      App.showToast('✅ ' + total + ' estándares importados correctamente');
       _resetImportador();
 
     } catch (err) {
