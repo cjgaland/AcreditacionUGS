@@ -1328,6 +1328,12 @@ mark {
   color: #1e5b8c;
   border: 1px solid #a8cde8;
 }
+.role-badge--gestor {
+  display: inline-block;
+  background: #ede8f5;
+  color: #5b1e8c;
+  border: 1px solid #cdb8e8;
+}
 @media (max-width: 500px) {
   .role-badge { display: none !important; }
 }

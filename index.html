@@ -246,6 +246,18 @@
         </a>
       </div>
 
+      <div class="sidebar-section" id="nav-gestor" style="display:none">
+        <div class="nav-label">Gestión</div>
+        <a class="nav-item active" data-view="dashboard" onclick="App.navigate('dashboard')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Cuadro de Mandos
+        </a>
+        <a class="nav-item" data-view="ugcs-list" onclick="App.navigate('ugcs-list')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Directorio de UGCs
+        </a>
+      </div>
+
       <div class="sidebar-section" id="nav-directorio">
         <div class="nav-label">Área</div>
         <a class="nav-item" data-view="directorio" onclick="App.navigate('directorio')">
@@ -307,7 +319,7 @@
         <div class="kpi-grid" id="kpi-grid">
           <div class="kpi-card">
             <div class="kpi-icon" style="background:#d6e8f5;color:#1e5b8c">📋</div>
-            <div class="kpi-val" id="kpi-total">60</div>
+            <div class="kpi-val" id="kpi-total">29</div>
             <div class="kpi-label">UGCs en el área</div>
           </div>
           <div class="kpi-card">
@@ -369,7 +381,7 @@
       <div class="view" id="view-ugcs-list" style="display:none">
         <div class="view-header">
           <h2>Directorio de UGCs</h2>
-          <span class="view-sub">60 unidades · Área de Gestión Sanitaria Sur de Córdoba</span>
+          <span class="view-sub">29 unidades · Área de Gestión Sanitaria Sur de Córdoba</span>
         </div>
 
         <!-- Filtros -->
@@ -393,6 +405,7 @@
             <option value="AP">Atención Primaria</option>
             <option value="HOSP">Hospitalaria</option>
             <option value="Urgencias">Urgencias</option>
+            <option value="CH">Centro Hospitalario</option>
           </select>
         </div>
 
@@ -895,6 +908,62 @@
       <button class="btn-danger" id="btn-dir-eliminar" onclick="Directorio.eliminar(document.getElementById('dir-id').value)" style="margin-right:auto;display:none">🗑 Eliminar</button>
       <button class="btn-secondary" onclick="App.cerrarModal('modal-directorio')">Cancelar</button>
       <button class="btn-primary" onclick="Directorio.guardar()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL: AÑADIR USUARIO (ADMIN) ════ -->
+<div class="modal-overlay" id="modal-nuevo-usuario" onclick="App.cerrarModal('modal-nuevo-usuario')">
+  <div class="modal modal-md" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="App.cerrarModal('modal-nuevo-usuario')">✕</button>
+    <h3 style="margin-bottom:16px">➕ Añadir nuevo usuario</h3>
+
+    <div class="form-group" style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Nombre completo *</label>
+      <input type="text" id="nuevo-usuario-nombre" placeholder="Nombre y apellidos" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text)">
+    </div>
+
+    <div class="form-group" style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Correo corporativo *</label>
+      <input type="email" id="nuevo-usuario-email" placeholder="usuario@juntadeandalucia.es" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text)">
+    </div>
+
+    <div class="form-group" style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Rol *</label>
+      <select id="nuevo-usuario-rol" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text)" onchange="document.getElementById('nuevo-usuario-ugc-row').style.display=this.value==='ugc'?'block':'none'">
+        <option value="ugc">🏥 UGC</option>
+        <option value="gestor">👁 Gestor</option>
+        <option value="admin">🔑 Administrador</option>
+      </select>
+    </div>
+
+    <div class="form-group" style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Función</label>
+      <select id="nuevo-usuario-funcion" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text)">
+        <option value="">— Sin definir —</option>
+        <option value="Director/a de UGC">Director/a de UGC</option>
+        <option value="Responsable de Proyecto">Responsable de Proyecto</option>
+        <option value="Director y Responsable">Director y Responsable</option>
+        <option value="Miembro UGC">Miembro UGC</option>
+      </select>
+    </div>
+
+    <div id="nuevo-usuario-ugc-row" class="form-group" style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">UGC asignada *</label>
+      <select id="nuevo-usuario-ugc" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text)">
+        <option value="">— Seleccionar UGC —</option>
+      </select>
+    </div>
+
+    <p id="nuevo-usuario-error" style="color:#c0392b;font-size:13px;margin-bottom:8px"></p>
+
+    <p style="font-size:12px;color:var(--text2);margin-bottom:14px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm)">
+      ℹ️ Se enviará automáticamente un correo al usuario para que establezca su contraseña.
+    </p>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="App.cerrarModal('modal-nuevo-usuario')">Cancelar</button>
+      <button class="btn-primary" id="btn-guardar-nuevo-usuario" onclick="App.guardarNuevoUsuario()">Crear usuario</button>
     </div>
   </div>
 </div>

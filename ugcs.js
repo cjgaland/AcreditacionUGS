@@ -4,8 +4,10 @@
    ═══════════════════════════════════════════════════════════════
 
    IDs asignados:
-     HO_xxx  →  UGC Hospitalaria
-     AP_xxx  →  UGC Atención Primaria
+     HO_xxx  →  UGC Hospitalaria (13)
+     AP_xxx  →  UGC Atención Primaria / Urgencias (13)
+     CH_xxx  →  Centro Hospitalario — ámbito general (3)
+   Total: 29 UGCs
    ═══════════════════════════════════════════════════════════════ */
 
 const UGCS = [
@@ -524,6 +526,72 @@ const UGCS = [
     "codigo_acsa":          "",
     "ambito":               "Urgencias",
     "ambito_label":         "Urgencias",
+    "fase":                 "Sin solicitar",
+    "estado_fase":          "",
+    "fecha_inicio":         null,
+    "fecha_prevista":       null,
+    "fecha_fin":            null,
+    "proyectos_anteriores": "",
+    "direccion":            "",
+    "telefono1":            "",
+    "telefono2":            null,
+    "correo":               "",
+    "web":                  "",
+    "observaciones":        ""
+  },
+
+  /* ═══════════════════════════════════
+     CENTROS HOSPITALARIOS  (3)
+     Ámbito general — Manual ACSA para
+     centros sanitarios y sociosanitarios
+  ════════════════════════════════════ */
+  {
+    "id":                   "CH_HIM",
+    "denominacion":         "Hospital Infanta Margarita",
+    "ubicacion":            "Cabra",
+    "codigo_acsa":          "",
+    "ambito":               "CH",
+    "ambito_label":         "Centro Hospitalario",
+    "fase":                 "Sin solicitar",
+    "estado_fase":          "",
+    "fecha_inicio":         null,
+    "fecha_prevista":       null,
+    "fecha_fin":            null,
+    "proyectos_anteriores": "",
+    "direccion":            "",
+    "telefono1":            "",
+    "telefono2":            null,
+    "correo":               "",
+    "web":                  "",
+    "observaciones":        ""
+  },
+  {
+    "id":                   "CH_HMO",
+    "denominacion":         "Hospital de Montilla",
+    "ubicacion":            "Montilla",
+    "codigo_acsa":          "",
+    "ambito":               "CH",
+    "ambito_label":         "Centro Hospitalario",
+    "fase":                 "Sin solicitar",
+    "estado_fase":          "",
+    "fecha_inicio":         null,
+    "fecha_prevista":       null,
+    "fecha_fin":            null,
+    "proyectos_anteriores": "",
+    "direccion":            "",
+    "telefono1":            "",
+    "telefono2":            null,
+    "correo":               "",
+    "web":                  "",
+    "observaciones":        ""
+  },
+  {
+    "id":                   "CH_HPG",
+    "denominacion":         "Hospital de Puente Genil",
+    "ubicacion":            "Puente Genil",
+    "codigo_acsa":          "",
+    "ambito":               "CH",
+    "ambito_label":         "Centro Hospitalario",
     "fase":                 "Sin solicitar",
     "estado_fase":          "",
     "fecha_inicio":         null,

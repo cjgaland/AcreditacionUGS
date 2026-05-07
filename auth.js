@@ -113,9 +113,10 @@ auth.onAuthStateChanged(async user => {
     if (snap.exists) {
       currentPerfil = snap.data();
     } else {
+      const nombre = user.displayName || user.email;
       const nuevoPerfil = {
         uid:               user.uid,
-        nombre:            user.displayName || user.email,
+        nombre,
         email:             user.email,
         rol:               'pendiente',
         ugc_id:            null,
@@ -125,6 +126,18 @@ auth.onAuthStateChanged(async user => {
       };
       await ref.set(nuevoPerfil);
       currentPerfil = nuevoPerfil;
+      // Auto-añadir al directorio del área al registrarse por primera vez
+      try {
+        await db.collection(COL.directorio).add({
+          nombre,
+          email:    user.email,
+          cargo:    '',
+          telefono: '',
+          tipo:     'Personal',
+          orden:    999,
+          creado_en: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch(_e) { /* no bloquea el acceso si falla */ }
     }
 
     const sl2 = document.getElementById('screen-login');
@@ -157,6 +170,7 @@ function gestionarRol(perfil) {
   switch (perfil.rol) {
     case 'admin':     App.mostrarPanelAdmin(perfil);    break;
     case 'ugc':       App.mostrarPanelUGC(perfil);      break;
+    case 'gestor':    App.mostrarPanelGestor(perfil);   break;
     case 'pendiente': mostrarPantallaPendiente(perfil); break;
     default:
       mostrarErrorLogin('Rol no reconocido. Contacta con el administrador.');
@@ -205,10 +219,11 @@ function setModo(modo) {
 //   GETTERS
 // ═════════════════════════════════════════════════════════════════
 
-function getUser()   { return currentUser;   }
-function getPerfil() { return currentPerfil; }
-function isAdmin()   { return currentPerfil && currentPerfil.rol === 'admin'; }
-function isUGC()     { return currentPerfil && currentPerfil.rol === 'ugc';   }
+function getUser()    { return currentUser;   }
+function getPerfil()  { return currentPerfil; }
+function isAdmin()    { return currentPerfil && currentPerfil.rol === 'admin';  }
+function isUGC()      { return currentPerfil && currentPerfil.rol === 'ugc';    }
+function isGestor()   { return currentPerfil && currentPerfil.rol === 'gestor'; }
 
 // ═════════════════════════════════════════════════════════════════
 //   UI

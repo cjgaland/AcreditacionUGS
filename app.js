@@ -6,7 +6,7 @@
 /* jshint esversion: 9 */
 /* global firebase, auth, db, COL, UGCS, STANDARDS,
           calcularNivel, fmtFecha, fmtFechaHora, calcularFechasACSA, fmtFechaStr,
-          getUser, getPerfil, isAdmin, isUGC,
+          getUser, getPerfil, isAdmin, isUGC, isGestor,
           logout, abrirWhatsApp,
           iniciarListenerNotificaciones,
           iniciarListenerNotificacionesAdmin,
@@ -63,6 +63,7 @@ const App = {
   async mostrarPanelAdmin(perfil) {
     document.getElementById('nav-admin').style.display      = 'block';
     document.getElementById('nav-ugc').style.display        = 'none';
+    document.getElementById('nav-gestor').style.display     = 'none';
     document.getElementById('nav-utilidades').style.display = 'block';
     document.getElementById('userName').textContent         = perfil.nombre;
     document.getElementById('userEmail').textContent        = perfil.email;
@@ -82,9 +83,25 @@ const App = {
     }
   },
 
+  async mostrarPanelGestor(perfil) {
+    document.getElementById('nav-gestor').style.display     = 'block';
+    document.getElementById('nav-admin').style.display      = 'none';
+    document.getElementById('nav-ugc').style.display        = 'none';
+    document.getElementById('nav-utilidades').style.display = 'none';
+    document.getElementById('userName').textContent         = perfil.nombre;
+    document.getElementById('userEmail').textContent        = perfil.email;
+    document.getElementById('userRol').textContent          = '👁 Gestor';
+    App._setUserAvatar(perfil);
+    App._setRolBadge('gestor');
+    iniciarListenerNotificacionesAdmin();
+    await App._sincronizarUGCs();
+    App.navigate('dashboard');
+  },
+
   async mostrarPanelUGC(perfil) {
     document.getElementById('nav-ugc').style.display        = 'block';
     document.getElementById('nav-admin').style.display      = 'none';
+    document.getElementById('nav-gestor').style.display     = 'none';
     document.getElementById('nav-utilidades').style.display = 'none';
     document.getElementById('userName').textContent         = perfil.nombre;
     document.getElementById('userEmail').textContent        = perfil.email;
@@ -143,7 +160,8 @@ const App = {
   _setRolBadge(rol) {
     const badge = document.getElementById('user-role-badge');
     if (!badge) return;
-    badge.textContent = rol === 'admin' ? 'Administrador' : 'Usuario UGC';
+    const labels = { admin: 'Administrador', ugc: 'Usuario UGC', gestor: 'Gestor' };
+    badge.textContent = labels[rol] || rol;
     badge.className   = 'role-badge role-badge--' + rol;
   },
 
@@ -535,8 +553,15 @@ const App = {
     const ugc = UGCS.find(u => u.id === ugcId);
     if (!ugc) return;
 
-    document.getElementById('ficha-titulo').textContent   = ugc.denominacion;
+    document.getElementById('ficha-titulo').textContent    = ugc.denominacion;
     document.getElementById('ficha-subtitulo').textContent = ugc.ubicacion + ' · ' + ugc.ambito_label;
+
+    // Modo gestor: ocultar controles de gestión
+    const modoLectura = isGestor();
+    const btnNuevaReunion = document.querySelector('#view-ficha-ugc .btn-secondary');
+    if (btnNuevaReunion) btnNuevaReunion.style.display = modoLectura ? 'none' : '';
+    const tabMsgs = document.querySelector('#view-ficha-ugc .tab[data-tab="mensajes-ugc"]');
+    if (tabMsgs) tabMsgs.style.display = modoLectura ? 'none' : '';
 
     // Mostrar vista ficha
     document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
@@ -1080,7 +1105,7 @@ const App = {
       el.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
           <h4 style="font-size:13px;font-weight:600;margin:0">Información de la unidad</h4>
-          <button class="btn-sm" onclick="App._mostrarInfoUGC(true)">✏️ Editar</button>
+          ${isGestor() ? '' : `<button class="btn-sm" onclick="App._mostrarInfoUGC(true)">✏️ Editar</button>`}
         </div>
         ${App._alertasCertHtml({ ...ugc, ...ugcFs })}
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;padding:8px 0">
@@ -1333,11 +1358,12 @@ const App = {
 
           <div class="evidencia-block">
             <label>Estado del estándar</label>
+            ${isGestor() ? `<div style="padding:9px 12px;margin-bottom:10px;background:var(--surface2);border-radius:var(--radius-sm);font-size:13px;color:var(--text2)">Modo solo lectura — vista de Gestor</div>` : `
             <select id="modal-est-estado" style="width:100%;padding:9px 12px;margin-bottom:10px">
               <option value="pendiente" ${d.estado==='pendiente'?'selected':''}>⭕ Pendiente</option>
               ${isAdmin() ? `<option value="cumple" ${d.estado==='cumple'?'selected':''}>✅ Cumple (validado)</option>` : ''}
               <option value="propuesto" ${d.estado==='propuesto'?'selected':''}>⏳ Propuesto a cumple</option>
-            </select>
+            </select>`}
             <label>Evidencia / descripción</label>
             <div class="campo-expand-wrap">
               <textarea class="campo-expandible" id="modal-est-evidencia" rows="4" data-expanded="0"
@@ -1376,8 +1402,8 @@ const App = {
           ${d.validado_en ? `<div style="font-size:11px;color:var(--green);margin-bottom:14px">✅ Validado el ${fmtFecha(d.validado_en)}</div>` : ''}
 
           <div style="display:flex;justify-content:flex-end;gap:8px">
-            <button class="btn-secondary" onclick="App.cerrarModal('modal-estandar')">Cancelar</button>
-            <button class="btn-primary" onclick="App.guardarEstado('${ugcId}','${codigo}')">Guardar</button>
+            <button class="btn-secondary" onclick="App.cerrarModal('modal-estandar')">Cerrar</button>
+            ${isGestor() ? '' : `<button class="btn-primary" onclick="App.guardarEstado('${ugcId}','${codigo}')">Guardar</button>`}
           </div>`;
     } catch(e) {
       content.innerHTML = '<div class="empty-state"><p>Error al cargar el estándar.</p></div>';
@@ -1929,26 +1955,33 @@ const App = {
         el.innerHTML = '<div class="empty-state"><p>Sin usuarios registrados.</p></div>';
         return;
       }
+      const FUNCIONES = ['Director/a de UGC','Responsable de Proyecto','Director y Responsable','Miembro UGC'];
       el.innerHTML = `
+        <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+          <button class="btn-primary" onclick="App.crearUsuario()">➕ Añadir usuario</button>
+        </div>
         <table class="tabla-acreditacion">
-          <thead><tr><th>Usuario</th><th>Email</th><th>Rol</th><th>UGC</th><th>Registro</th></tr></thead>
+          <thead><tr><th>Usuario</th><th>Email</th><th>Rol</th><th>Función</th><th>UGC</th><th>Registro</th></tr></thead>
           <tbody>
             ${snap.docs.map(doc => {
               const d = doc.data();
               const selectUGC = `<select onchange="App.asignarUGC('${doc.id}',this.value)" style="padding:5px 8px;font-size:12px"><option value="">— Sin asignar —</option>${UGCS.map(u=>`<option value="${u.id}" ${d.ugc_id===u.id?'selected':''}>${u.denominacion}</option>`).join('')}</select>`;
-              const textoAdmin = `<span style="font-size:12px;color:var(--text3);font-style:italic">— Administrador —</span>`;
-              const ugcCell = d.rol === 'admin' ? textoAdmin : selectUGC;
+              const textoSinUGC = `<span style="font-size:12px;color:var(--text3);font-style:italic">—</span>`;
+              const ugcCell = (d.rol === 'admin' || d.rol === 'gestor') ? textoSinUGC : selectUGC;
+              const selectFuncion = `<select onchange="App.asignarFuncion('${doc.id}',this.value)" style="padding:5px 8px;font-size:12px"><option value="">— Sin definir —</option>${FUNCIONES.map(f=>`<option value="${f}" ${d.funcion===f?'selected':''}>${f}</option>`).join('')}</select>`;
               return `
                 <tr>
-                  <td><strong>${d.nombre}</strong></td>
-                  <td><small>${d.email}</small></td>
+                  <td><strong>${escHtml(d.nombre)}</strong></td>
+                  <td><small>${escHtml(d.email)}</small></td>
                   <td>
                     <select onchange="App.cambiarRol('${doc.id}',this.value)" style="padding:5px 8px;font-size:12px">
                       <option value="pendiente" ${d.rol==='pendiente'?'selected':''}>⏳ Pendiente</option>
                       <option value="admin"     ${d.rol==='admin'?'selected':''}>🔑 Admin</option>
+                      <option value="gestor"    ${d.rol==='gestor'?'selected':''}>👁 Gestor</option>
                       <option value="ugc"       ${d.rol==='ugc'?'selected':''}>🏥 UGC</option>
                     </select>
                   </td>
+                  <td>${selectFuncion}</td>
                   <td>${ugcCell}</td>
                   <td><small style="color:var(--text3)">${d.creado_en ? fmtFecha(d.creado_en) : '—'}</small></td>
                 </tr>`;
@@ -1963,10 +1996,10 @@ const App = {
   async cambiarRol(uid, rol) {
     try {
       const datos = { rol };
-      if (rol === 'admin') datos.ugc_id = null;   // los admins no pertenecen a ninguna UGC
+      if (rol === 'admin' || rol === 'gestor') datos.ugc_id = null;
       await db.collection(COL.usuarios).doc(uid).update(datos);
       App.showToast('✅ Rol actualizado');
-      App.cargarUsuarios();   // recargar para que la columna UGC refleje el cambio
+      App.cargarUsuarios();
     } catch(e) { App.showToast('❌ Error: ' + e.message); }
   },
 
@@ -1975,6 +2008,103 @@ const App = {
       await db.collection(COL.usuarios).doc(uid).update({ ugc_id: ugcId || null });
       App.showToast('✅ UGC asignada');
     } catch(e) { App.showToast('❌ Error: ' + e.message); }
+  },
+
+  async asignarFuncion(uid, funcion) {
+    try {
+      await db.collection(COL.usuarios).doc(uid).update({ funcion: funcion || null });
+      App.showToast('✅ Función actualizada');
+    } catch(e) { App.showToast('❌ Error: ' + e.message); }
+  },
+
+  crearUsuario() {
+    document.getElementById('nuevo-usuario-nombre').value  = '';
+    document.getElementById('nuevo-usuario-email').value   = '';
+    document.getElementById('nuevo-usuario-rol').value     = 'ugc';
+    document.getElementById('nuevo-usuario-funcion').value = '';
+    document.getElementById('nuevo-usuario-ugc-row').style.display = 'block';
+    document.getElementById('nuevo-usuario-error').textContent = '';
+    // Rellenar select de UGCs
+    const selUGC = document.getElementById('nuevo-usuario-ugc');
+    selUGC.innerHTML = '<option value="">— Seleccionar UGC —</option>' +
+      UGCS.map(u => `<option value="${u.id}">${escHtml(u.denominacion)}</option>`).join('');
+    App.abrirModal('modal-nuevo-usuario');
+  },
+
+  async guardarNuevoUsuario() {
+    const nombre  = document.getElementById('nuevo-usuario-nombre').value.trim();
+    const email   = document.getElementById('nuevo-usuario-email').value.trim();
+    const rol     = document.getElementById('nuevo-usuario-rol').value;
+    const ugcId   = document.getElementById('nuevo-usuario-ugc').value || null;
+    const funcion = document.getElementById('nuevo-usuario-funcion').value || null;
+    const errEl   = document.getElementById('nuevo-usuario-error');
+    errEl.textContent = '';
+
+    if (!nombre) { errEl.textContent = 'Introduce el nombre completo.'; return; }
+    if (!email)  { errEl.textContent = 'Introduce el correo corporativo.'; return; }
+    if (!email.endsWith('@juntadeandalucia.es')) {
+      errEl.textContent = 'Solo se permiten cuentas @juntadeandalucia.es.'; return;
+    }
+    if (rol === 'ugc' && !ugcId) { errEl.textContent = 'Selecciona la UGC para este usuario.'; return; }
+
+    const btn = document.getElementById('btn-guardar-nuevo-usuario');
+    btn.disabled = true;
+    btn.textContent = 'Creando…';
+
+    try {
+      // 1. Crear usuario en Firebase Auth sin afectar la sesión actual
+      const apiKey = firebase.app().options.apiKey;
+      const tmpPass = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + 'Aa1!';
+      const resp = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: tmpPass, displayName: nombre, returnSecureToken: false })
+        }
+      );
+      const data = await resp.json();
+      if (!resp.ok) {
+        const msgs = {
+          'EMAIL_EXISTS': 'Ya existe una cuenta con ese correo.',
+          'INVALID_EMAIL': 'El formato del correo no es válido.',
+          'WEAK_PASSWORD : Password should be at least 6 characters': 'Contraseña interna muy débil.'
+        };
+        errEl.textContent = msgs[data.error && data.error.message] || ('Error: ' + (data.error && data.error.message));
+        btn.disabled = false; btn.textContent = 'Crear usuario'; return;
+      }
+      const uid = data.localId;
+
+      // 2. Crear perfil en Firestore
+      await db.collection(COL.usuarios).doc(uid).set({
+        uid, nombre, email,
+        rol, ugc_id: (rol === 'ugc') ? ugcId : null,
+        funcion: funcion || null,
+        cargo: '', telefono_whatsapp: '',
+        creado_en: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // 3. Auto-añadir al directorio del área
+      try {
+        await db.collection(COL.directorio).add({
+          nombre, email, cargo: '', telefono: '',
+          tipo: 'Personal', orden: 999,
+          creado_en: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch(_e) { /* no bloquea si falla */ }
+
+      // 4. Enviar email de establecimiento de contraseña
+      try { await auth.sendPasswordResetEmail(email); } catch(_e) { /* no bloquea */ }
+
+      App.cerrarModal('modal-nuevo-usuario');
+      App.showToast('✅ Usuario creado y enlace de acceso enviado por correo');
+      App.cargarUsuarios();
+
+    } catch(e) {
+      errEl.textContent = 'Error inesperado: ' + e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Crear usuario';
+    }
   },
 
   /* ══════════════════════════════════════════════════
@@ -2306,7 +2436,7 @@ const App = {
         <p>Bienvenido/a al panel de <strong>Administrador</strong> de la Plataforma de Mentoría ACSA. Desde aquí gestionas todo el proceso de acreditación de las UGCs del Área de Gestión Sanitaria Sur de Córdoba: seguimiento de estándares, reuniones, mensajería y gestión de usuarios.</p>
         <div class="guia-hero-chips">
           <span class="guia-hero-chip">76 estándares ACSA</span>
-          <span class="guia-hero-chip">60 UGCs</span>
+          <span class="guia-hero-chip">29 UGCs</span>
           <span class="guia-hero-chip">3 niveles de certificación</span>
         </div>
       </div>
@@ -2339,14 +2469,14 @@ const App = {
       `)}
       ${sec('Directorio de UGCs', '🏥', `
         ${lista(
-          'Lista las 60 UGCs del área con su fase actual de acreditación y nombre completo.',
+          'Lista las 29 UGCs del área con su fase actual de acreditación y nombre completo.',
           'Usa el buscador por nombre y los filtros de <strong>Fase</strong> y <strong>Ámbito</strong> (Atención Primaria / Hospital) para localizar rápidamente una UGC.',
           'Haz clic en una tarjeta para abrir la <strong>Ficha UGC</strong> con 5 pestañas: Progreso, Estándares, Reuniones, Mensajes e Información.'
         )}
       `)}
       ${sec('Ficha UGC · Pestaña Progreso', '📈', `
         ${lista(
-          'Muestra el porcentaje de estándares cumplidos desglosado por Grupo (G0 obligatorios, GI, GII, GIII).',
+          'Muestra el porcentaje de estándares cumplidos desglosado por Grupo (GIO (Obligatorios), GI, GII, GIII).',
           'Indica el nivel de certificación alcanzado: <em>En proceso → Avanzado → Óptimo → Excelente</em>.',
           'Botón <strong>Generar informe PDF</strong>: crea un informe completo de la UGC, imprimible desde el navegador.'
         )}
@@ -2371,7 +2501,7 @@ const App = {
       `)}
       ${sec('Filtros de estándares', '🔍', `
         ${lista(
-          '<strong>Grupo:</strong> G0 Obligatorios · GI · GII · GIII.',
+          '<strong>Grupo:</strong> GIO (Obligatorios) · GI · GII · GIII.',
           '<strong>Obligatoriedad:</strong> Solo obligatorios / todos.',
           '<strong>Criterio:</strong> filtra por criterio ACSA específico.',
           '<strong>Estado:</strong> Pendiente / Propuesto / Cumple.',
@@ -2418,7 +2548,7 @@ const App = {
         ${steps(
           'Ve a <strong>Usuarios</strong> en el sidebar para ver todos los registrados.',
           'Haz clic en el selector de rol junto a un usuario para cambiarlo entre <em>Pendiente</em>, <em>Usuario UGC</em> y <em>Administrador</em>.',
-          'Si cambias a un usuario a rol <em>UGC</em>, aparece un selector con la lista de las 60 UGCs para asignarle la suya.',
+          'Si cambias a un usuario a rol <em>UGC</em>, aparece un selector con la lista de las 29 UGCs para asignarle la suya.',
           'Al asignar rol <em>Admin</em>, la UGC asignada se borra automáticamente.'
         )}
         ${tip('El primer administrador debe crearse manualmente en la consola de Firestore: ve a /usuarios/{uid} y cambia el campo <code>rol</code> a <em>admin</em>.')}
@@ -2505,7 +2635,7 @@ const App = {
     const panelUGCEstado = `
       ${sec('Mi Estado · Resumen de progreso', '📊', `
         ${lista(
-          'Muestra el porcentaje de estándares cumplidos en tu UGC, desglosado por grupo: <strong>G0 Obligatorios</strong>, <strong>Grupo I</strong>, <strong>Grupo II</strong> y <strong>Grupo III</strong>.',
+          'Muestra el porcentaje de estándares cumplidos en tu UGC, desglosado por grupo: <strong>GIO (Obligatorios)</strong>, <strong>Grupo I</strong>, <strong>Grupo II</strong> y <strong>Grupo III</strong>.',
           'El nivel de certificación actual aparece destacado: <em>En proceso → Avanzado → Óptimo → Excelente</em>.',
           'Si ya tienes certificación, verás las fechas clave del ciclo y el nivel alcanzado.'
         )}
@@ -2543,7 +2673,7 @@ const App = {
       `)}
       ${sec('Filtros disponibles', '🔍', `
         ${lista(
-          '<strong>Grupo:</strong> G0 Obligatorios, GI, GII, GIII.',
+          '<strong>Grupo:</strong> GIO (Obligatorios), GI, GII, GIII.',
           '<strong>Estado:</strong> Pendiente / Propuesto / Cumple.',
           '<strong>Obligatorios:</strong> muestra solo los estándares imprescindibles para la certificación.',
           '<strong>Texto libre:</strong> busca por código o palabras clave del estándar.'
@@ -2816,7 +2946,7 @@ const App = {
 
     /* ── PORTADA ───────────────────────────────────────────────── */
     const coverDesc = esAdmin
-      ? 'Administración completa del proceso de acreditación ACSA: seguimiento de las 60 UGCs, validación de estándares, mensajería, gestión de usuarios e importación de datos desde ME_jora C.'
+      ? 'Administración completa del proceso de acreditación ACSA: seguimiento de las 29 UGCs, validación de estándares, mensajería, gestión de usuarios e importación de datos desde ME_jora C.'
       : 'Seguimiento del proceso de acreditación ACSA de tu Unidad de Gestión Clínica: registro de evidencias, comunicación con el equipo de Calidad y consulta del progreso.';
 
     const cigData = [
@@ -2960,7 +3090,7 @@ const App = {
       ${blk('Grupos de estándares', `
         ${tbl(['Grupo', 'Descripción', 'Nº estándares'],
           [
-            ['G0 Obligatorios', 'Estándares imprescindibles para cualquier nivel de certificación.', '31'],
+            ['GIO (Obligatorios)', 'Estándares imprescindibles para cualquier nivel de certificación.', '31'],
             ['Grupo I (GI)', 'Estándares adicionales para niveles Avanzado y superiores.', '19'],
             ['Grupo II (GII)', 'Estándares para nivel Óptimo y Excelente.', '18'],
             ['Grupo III (GIII)', 'Estándares para nivel Excelente.', '8'],
@@ -2972,7 +3102,7 @@ const App = {
         ${tbl(['Nivel', 'Requisitos para alcanzarlo'],
           [
             ['En proceso', 'Aún no se han completado los requisitos del nivel Avanzado.'],
-            ['Avanzado', '100% de los estándares obligatorios (G0) + ≥ 70% del Grupo I.'],
+            ['Avanzado', '100% de los estándares obligatorios (GIO) + ≥ 70% del Grupo I.'],
             ['Óptimo', '100% Grupo I + ≥ 40% del Grupo II.'],
             ['Excelente', '100% Grupo I + 100% Grupo II + ≥ 40% del Grupo III.'],
           ]
@@ -3009,7 +3139,7 @@ const App = {
       `)}
       ${blk('Filtros disponibles', `
         ${lista(
-          '<strong>Grupo:</strong> filtra por G0, GI, GII o GIII para centrarte en los estándares que necesitas alcanzar para el siguiente nivel.',
+          '<strong>Grupo:</strong> filtra por GIO, GI, GII o GIII para centrarte en los estándares que necesitas alcanzar para el siguiente nivel.',
           '<strong>Estado:</strong> Pendiente / Propuesto / Cumple. Muy útil para ver solo los que aún requieren tu atención.',
           '<strong>Solo obligatorios:</strong> muestra únicamente los 31 estándares imprescindibles.',
           '<strong>Criterio y Bloque:</strong> filtrado por criterios ACSA específicos.',
@@ -3116,7 +3246,7 @@ const App = {
     const seccionesAdmin = esAdmin ? (
       secc(ICO.dash, 'Cuadro de Mandos', 'Visión global del proceso de acreditación de todas las UGCs', `
         ${blk('¿Qué muestra el cuadro de mandos?', `
-          <p>El <strong>Cuadro de Mandos</strong> es la pantalla principal del administrador. Ofrece una visión global del estado de acreditación de las 60 UGCs del Área de Gestión Sanitaria Sur de Córdoba en tiempo real.</p>
+          <p>El <strong>Cuadro de Mandos</strong> es la pantalla principal del administrador. Ofrece una visión global del estado de acreditación de las 29 UGCs del Área de Gestión Sanitaria Sur de Córdoba en tiempo real.</p>
           ${lista(
             'Tarjetas con el nombre y fase actual de cada UGC. El color del borde indica la fase activa (solicitud, autoevaluación, evaluación, establecimiento, seguimiento, recertificación).',
             'Contador de estándares en estado <strong>Propuesto</strong> pendientes de validación en todo el área.',
@@ -3130,11 +3260,11 @@ const App = {
       `) +
       secc(ICO.ugcs, 'Directorio de UGCs y Ficha UGC', 'Gestión completa del seguimiento por unidad', `
         ${blk('Directorio de UGCs', `
-          <p>Lista completa de las 60 UGCs del área con su fase actual de acreditación, ámbito (Atención Primaria / Hospital) y nombre completo. Dispone de buscador y filtros por fase y ámbito.</p>
+          <p>Lista completa de las 29 UGCs del área con su fase actual de acreditación, ámbito (Atención Primaria / Hospital) y nombre completo. Dispone de buscador y filtros por fase y ámbito.</p>
         `)}
         ${blk('Ficha UGC · Pestaña Progreso', `
           ${lista(
-            'Porcentaje de estándares cumplidos desglosado por grupo (G0, GI, GII, GIII).',
+            'Porcentaje de estándares cumplidos desglosado por grupo (GIO, GI, GII, GIII).',
             'Nivel de certificación actual y requisitos para el siguiente nivel.',
             'Botón <strong>Generar informe PDF</strong>: crea un informe completo de la UGC con todos sus datos, estándares, reuniones y mensajes.'
           )}
@@ -3189,7 +3319,7 @@ const App = {
       `) +
       secc(ICO.mensaje, 'Gestión de Mensajes (Administrador)', 'Panel centralizado de comunicaciones con todas las UGCs', `
         ${blk('Panel centralizado de mensajes', `
-          <p>El panel de mensajes del administrador agrupa todas las comunicaciones de las 60 UGCs. Los mensajes se organizan en <strong>hilos</strong> (mensaje original + todas las respuestas).</p>
+          <p>El panel de mensajes del administrador agrupa todas las comunicaciones de las 29 UGCs. Los mensajes se organizan en <strong>hilos</strong> (mensaje original + todas las respuestas).</p>
           ${lista(
             'Pestaña <strong>Activos:</strong> hilos con mensajes no leídos, ordenados por fecha (más recientes primero).',
             'Pestaña <strong>Historial:</strong> hilos ya leídos para consultas futuras.',
@@ -3226,7 +3356,7 @@ const App = {
             'Ve a <strong>Usuarios</strong> en el menú lateral.',
             'Verás la lista de todos los usuarios registrados con su nombre, correo, rol actual y UGC asignada.',
             'Para cambiar el rol: haz clic en el selector junto al usuario y elige el nuevo rol.',
-            'Si asignas rol <strong>UGC</strong>, aparece un selector con la lista de las 60 UGCs para asignarle la suya.',
+            'Si asignas rol <strong>UGC</strong>, aparece un selector con la lista de las 29 UGCs para asignarle la suya.',
             'Si asignas rol <strong>Admin</strong>, la UGC asignada se borra automáticamente.',
             'Los cambios se guardan automáticamente en cuanto seleccionas el nuevo valor.'
           )}
