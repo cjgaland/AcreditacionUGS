@@ -1955,7 +1955,7 @@ const App = {
         el.innerHTML = '<div class="empty-state"><p>Sin usuarios registrados.</p></div>';
         return;
       }
-      const FUNCIONES = ['Director/a de UGC','Responsable de Proyecto','Director y Responsable','Miembro UGC'];
+      const FUNCIONES = ['Administrador App','Gestión','Director/a de UGC','Responsable de Proyecto','Director y Responsable','Miembro UGC'];
       el.innerHTML = `
         <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
           <button class="btn-primary" onclick="App.crearUsuario()">➕ Añadir usuario</button>
@@ -1996,7 +1996,8 @@ const App = {
   async cambiarRol(uid, rol) {
     try {
       const datos = { rol };
-      if (rol === 'admin' || rol === 'gestor') datos.ugc_id = null;
+      if (rol === 'admin')  { datos.ugc_id = null; datos.funcion = 'Administrador App'; }
+      if (rol === 'gestor') { datos.ugc_id = null; datos.funcion = 'Gestión'; }
       await db.collection(COL.usuarios).doc(uid).update(datos);
       App.showToast('✅ Rol actualizado');
       App.cargarUsuarios();
@@ -2036,7 +2037,8 @@ const App = {
     const email   = document.getElementById('nuevo-usuario-email').value.trim();
     const rol     = document.getElementById('nuevo-usuario-rol').value;
     const ugcId   = document.getElementById('nuevo-usuario-ugc').value || null;
-    const funcion = document.getElementById('nuevo-usuario-funcion').value || null;
+    const funcionSel = document.getElementById('nuevo-usuario-funcion').value;
+    const funcion = funcionSel || (rol === 'admin' ? 'Administrador App' : rol === 'gestor' ? 'Gestión' : null);
     const errEl   = document.getElementById('nuevo-usuario-error');
     errEl.textContent = '';
 
